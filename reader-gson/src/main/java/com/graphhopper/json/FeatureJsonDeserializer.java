@@ -15,8 +15,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.graphhopper.json.geo;
+package com.graphhopper.json;
 
+import com.graphhopper.json.geo.JsonFeature;
+import com.graphhopper.json.geo.Geometry;
+import com.graphhopper.json.geo.Point;
+import com.graphhopper.json.geo.LineString;
 import com.google.gson.*;
 import com.graphhopper.util.shapes.BBox;
 
@@ -25,7 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Instructions how to read the different geometry types.
+ * This class makes sure reading the different geometry types.
  *
  * @author Peter Karich
  */
@@ -33,46 +37,47 @@ public class FeatureJsonDeserializer implements JsonDeserializer<JsonFeature> {
     @Override
     public JsonFeature deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
         try {
-            JsonFeature feature = new JsonFeature();
             JsonObject obj = json.getAsJsonObject();
-
+            String id, strType = null;
+            Map<String,Object> properties = null;
+            BBox bbox = null;
+            Geometry geometry = null;
+            
             // TODO ensure uniqueness
             if (obj.has("id"))
-                feature.id = obj.get("id").getAsString();
+                id = obj.get("id").getAsString();
             else
-                feature.id = UUID.randomUUID().toString();
+                id = UUID.randomUUID().toString();
 
             if (obj.has("properties")) {
-                Map<String, Object> map = context.deserialize(obj.get("properties"), Map.class);
-                feature.properties = map;
+               properties= context.deserialize(obj.get("properties"), Map.class);
             }
 
             if (obj.has("bbox"))
-                feature.bbox = parseBBox(obj.get("bbox").getAsJsonArray());
+                bbox = parseBBox(obj.get("bbox").getAsJsonArray());
 
             if (obj.has("geometry")) {
-                JsonObject geometry = obj.get("geometry").getAsJsonObject();
+                JsonObject geometryJson = obj.get("geometry").getAsJsonObject();
 
-                if (geometry.has("coordinates")) {
-                    if (!geometry.has("type"))
+                if (geometryJson.has("coordinates")) {
+                    if (!geometryJson.has("type"))
                         throw new IllegalArgumentException("No type for non-empty coordinates specified");
 
-                    String strType = context.deserialize(geometry.get("type"), String.class);
-                    feature.type = strType;
+                     strType = context.deserialize(geometryJson.get("type"), String.class);
                     if ("Point".equals(strType)) {
-                        JsonArray arr = geometry.get("coordinates").getAsJsonArray();
+                        JsonArray arr = geometryJson.get("coordinates").getAsJsonArray();
                         double lon = arr.get(0).getAsDouble();
                         double lat = arr.get(1).getAsDouble();
                         if (arr.size() == 3)
-                            feature.geometry = new Point(lat, lon, arr.get(2).getAsDouble());
+                            geometry = new Point(lat, lon, arr.get(2).getAsDouble());
                         else
-                            feature.geometry = new Point(lat, lon);
+                            geometry = new Point(lat, lon);
 
                     } else if ("MultiPoint".equals(strType)) {
-                        feature.geometry = parseLineString(geometry);
+                        geometry = parseLineString(geometryJson);
 
                     } else if ("LineString".equals(strType)) {
-                        feature.geometry = parseLineString(geometry);
+                        geometry = parseLineString(geometryJson);
 
                     } else {
                         throw new IllegalArgumentException("Coordinates type " + strType + " not yet supported");
@@ -80,7 +85,7 @@ public class FeatureJsonDeserializer implements JsonDeserializer<JsonFeature> {
                 }
             }
 
-            return feature;
+            return new JsonFeature(id, strType, bbox, geometry, properties);
 
         } catch (Exception ex) {
             throw new JsonParseException("Problem parsing JSON feature " + json);

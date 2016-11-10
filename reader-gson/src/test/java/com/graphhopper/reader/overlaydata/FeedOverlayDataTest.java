@@ -2,6 +2,7 @@ package com.graphhopper.reader.overlaydata;
 
 import com.graphhopper.json.GHson;
 import com.graphhopper.json.GHsonBuilder;
+import com.graphhopper.json.JsonFeatureConverter;
 import com.graphhopper.routing.AbstractRoutingAlgorithmTester;
 import com.graphhopper.routing.util.AllEdgesIterator;
 import com.graphhopper.routing.util.EncodingManager;
@@ -62,9 +63,10 @@ public class FeedOverlayDataTest {
             assertTrue(encoder.isForward(flags));
         }
 
-        FeedOverlayData instance = new FeedOverlayData(graph, encodingManager, locationIndex, ghson);
         Reader reader = new InputStreamReader(getClass().getResourceAsStream("overlaydata1.json"), Helper.UTF_CS);
-        long updates = instance.applyChanges(reader);
+        FeedOverlayData instance = new FeedOverlayData(graph, encodingManager, locationIndex);
+        JsonFeatureConverter converter = new JsonFeatureConverter(ghson, instance);
+        long updates = converter.applyChanges(reader);
         assertEquals(2, updates);
 
         // assert changed speed and access

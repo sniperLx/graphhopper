@@ -4,10 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.graphhopper</groupId>
-    <artifactId>graphhopper-reader-overlay-data</artifactId>
+    <artifactId>graphhopper-reader-gson</artifactId>
     <version>0.9-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>GraphHopper Reader for Overlay Data</name>
+    <name>GraphHopper Reader Gson</name>
 
     <parent>
         <groupId>com.graphhopper</groupId>
@@ -29,23 +29,7 @@
                  <scope>provided</scope>
             -->
         </dependency> 
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
-        </dependency>   
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>${slf4j.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
-            <scope>runtime</scope>
-        </dependency>
+        
         <dependency>
             <groupId>com.graphhopper</groupId>
             <artifactId>graphhopper-core</artifactId>
@@ -53,6 +37,7 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>   
+
     </dependencies>
     
 </project>

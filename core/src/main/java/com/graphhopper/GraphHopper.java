@@ -17,12 +17,15 @@
  */
 package com.graphhopper;
 
+import com.graphhopper.json.geo.JsonFeature;
 import com.graphhopper.reader.DataReader;
 import com.graphhopper.reader.dem.BridgeElevationInterpolator;
 import com.graphhopper.reader.dem.CGIARProvider;
 import com.graphhopper.reader.dem.ElevationProvider;
 import com.graphhopper.reader.dem.SRTMProvider;
 import com.graphhopper.reader.dem.TunnelElevationInterpolator;
+import com.graphhopper.reader.overlaydata.FeedOverlayData;
+import com.graphhopper.reader.overlaydata.GraphChangeResponse;
 import com.graphhopper.routing.*;
 import com.graphhopper.routing.ch.CHAlgoFactoryDecorator;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
@@ -52,6 +55,9 @@ import java.text.DateFormat;
 import java.util.*;
 
 import static com.graphhopper.util.Parameters.Algorithms.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Easy to use access point to configure import and (offline) routing.
@@ -100,6 +106,7 @@ public class GraphHopper implements GraphHopperAPI {
     private boolean calcPoints = true;
     private ElevationProvider eleProvider = ElevationProvider.NOOP;
     private FlagEncoderFactory flagEncoderFactory = FlagEncoderFactory.DEFAULT;
+    private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
     public GraphHopper() {
         chFactoryDecorator.setEnabled(true);
@@ -668,7 +675,7 @@ public class GraphHopper implements GraphHopperAPI {
      */
     private GraphHopper process(String graphHopperLocation) {
         setGraphHopperLocation(graphHopperLocation);
-        Lock lock = null;
+        GHLock lock = null;
         try {
             if (ghStorage.getDirectory().getDefaultType().isStoring()) {
                 lockFactory.setLockDir(new File(graphHopperLocation));
@@ -787,7 +794,7 @@ public class GraphHopper implements GraphHopperAPI {
         if (!new File(graphHopperFolder).exists())
             return false;
 
-        Lock lock = null;
+        GHLock lock = null;
         try {
             // create locks only if writes are allowed, if they are not allowed a lock cannot be created 
             // (e.g. on a read only filesystem locks would fail)
@@ -968,6 +975,8 @@ public class GraphHopper implements GraphHopperAPI {
             request.setVehicle(vehicle);
         }
 
+        Lock readLock = readWriteLock.readLock();
+        readLock.lock();
         try {
             if (!encodingManager.supports(vehicle))
                 throw new IllegalArgumentException("Vehicle " + vehicle + " unsupported. "
@@ -1066,6 +1075,24 @@ public class GraphHopper implements GraphHopperAPI {
         } catch (IllegalArgumentException ex) {
             ghRsp.addError(ex);
             return Collections.emptyList();
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    public GraphChangeResponse changeGraph(Collection<JsonFeature> collection) {
+        // TODO make an exception if called BEFORE preparation
+        if(getCHFactoryDecorator().isEnabled())
+            throw new IllegalStateException("To use the changeGraph API you need to turn off CH");
+        
+        Lock writeLock = readWriteLock.writeLock();
+        writeLock.lock();
+        try {
+            FeedOverlayData overlay = new FeedOverlayData(ghStorage, encodingManager, locationIndex);
+            long updateCount = overlay.applyChanges(collection);            
+            return new GraphChangeResponse(updateCount);
+        } finally {
+            writeLock.unlock();
         }
     }
 

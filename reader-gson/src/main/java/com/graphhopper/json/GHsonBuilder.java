@@ -15,22 +15,25 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.graphhopper.storage;
+package com.graphhopper.json;
+
+import com.graphhopper.json.geo.JsonFeature;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
- * A write lock. Influenced by Lucene code
- * <p>
- *
  * @author Peter Karich
  */
-public interface Lock {
-    String getName();
+public class GHsonBuilder {
+    public GHson create() {
+        // for now always return Gson implementation        
+        Gson gson = new GsonBuilder()
+                .disableHtmlEscaping()
+                .registerTypeHierarchyAdapter(JsonFeature.class, new FeatureJsonDeserializer())
+                .create();
+        // for geojson we could rely on external libs instead of inventing our own:
+        // https://github.com/filosganga/geogson or https://github.com/3sidedcube/Android-GeoGson
 
-    boolean tryLock();
-
-    boolean isLocked();
-
-    void release();
-
-    Exception getObtainFailedReason();
+        return new GHsonGson(gson);
+    }
 }

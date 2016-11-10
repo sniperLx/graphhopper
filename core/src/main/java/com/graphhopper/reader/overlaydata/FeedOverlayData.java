@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -51,12 +52,10 @@ public class FeedOverlayData {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final Graph graph;
     private final LocationIndex locationIndex;
-    private final GHson ghson;
     private final EncodingManager em;
     private boolean enableLogging = false;
 
-    public FeedOverlayData(Graph graph, EncodingManager em, LocationIndex locationIndex, GHson ghson) {
-        this.ghson = ghson;
+    public FeedOverlayData(Graph graph, EncodingManager em, LocationIndex locationIndex) {
         this.graph = graph;
         this.em = em;
         this.locationIndex = locationIndex;
@@ -66,40 +65,14 @@ public class FeedOverlayData {
         enableLogging = log;
     }
 
-    public long applyChanges(String fileOrFolderStr) {
-        File fileOrFolder = new File(fileOrFolderStr);
-        try {
-            if (fileOrFolder.isFile()) {
-                return applyChanges(new FileReader(fileOrFolder));
-            }
-
-            long sum = 0;
-            File[] fList = new File(fileOrFolderStr).listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return name.endsWith(".json");
-                }
-            });
-            for (File f : fList) {
-                sum += applyChanges(new FileReader(f));
-            }
-            return sum;
-
-        } catch (FileNotFoundException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
     /**
-     * This method applies changes to the graph, specified by the reader.
+     * This method applies changes to the graph, specified by the json features.
      *
      * @return number of successfully applied edge changes
      */
-    public long applyChanges(Reader reader) {
-        // read full file, later support one json feature or collection per line to avoid high mem consumption
-        JsonFeatureCollection data = ghson.fromJson(reader, JsonFeatureCollection.class);
+    public long applyChanges(Collection<JsonFeature> features) {
         long updates = 0;
-        for (JsonFeature jsonFeature : data.getFeatures()) {
+        for (JsonFeature jsonFeature : features) {
             if (!jsonFeature.hasProperties())
                 throw new IllegalArgumentException("One feature has no properties, please specify properties e.g. speed or access");
 

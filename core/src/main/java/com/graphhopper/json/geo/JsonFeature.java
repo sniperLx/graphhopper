@@ -25,11 +25,19 @@ import java.util.Map;
  * @author Peter Karich
  */
 public class JsonFeature {
-    String id;
-    String type;
-    BBox bbox;
-    Geometry geometry;
-    Map<String, Object> properties;
+    final String id;
+    final String type;
+    final BBox bbox;
+    final Geometry geometry;
+    final Map<String, Object> properties;
+
+    public JsonFeature(String id, String type, BBox bbox, Geometry geometry, Map<String, Object> properties) {
+        this.id = id;
+        this.type = type;
+        this.bbox = bbox;
+        this.geometry = geometry;
+        this.properties = properties;
+    }    
 
     public String getId() {
         return id;
