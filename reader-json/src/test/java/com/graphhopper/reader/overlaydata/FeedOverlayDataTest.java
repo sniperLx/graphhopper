@@ -1,7 +1,7 @@
 package com.graphhopper.reader.overlaydata;
 
-import com.graphhopper.json.GHson;
-import com.graphhopper.json.GHsonBuilder;
+import com.graphhopper.json.GHJson;
+import com.graphhopper.json.GHJsonBuilder;
 import com.graphhopper.json.JsonFeatureConverter;
 import com.graphhopper.routing.AbstractRoutingAlgorithmTester;
 import com.graphhopper.routing.util.AllEdgesIterator;
@@ -28,13 +28,13 @@ import static org.junit.Assert.*;
 public class FeedOverlayDataTest {
     private EncodingManager encodingManager;
     private GraphHopperStorage graph;
-    private GHson ghson;
+    private GHJson ghson;
 
     @Before
     public void setUp() {
         encodingManager = new EncodingManager("car");
         graph = new GraphBuilder(encodingManager).create();
-        ghson = new GHsonBuilder().create();
+        ghson = new GHJsonBuilder().create();
     }
 
     @Test

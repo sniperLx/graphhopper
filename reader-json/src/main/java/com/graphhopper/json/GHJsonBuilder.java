@@ -24,8 +24,8 @@ import com.google.gson.GsonBuilder;
 /**
  * @author Peter Karich
  */
-public class GHsonBuilder {
-    public GHson create() {
+public class GHJsonBuilder {
+    public GHJson create() {
         // for now always return Gson implementation        
         Gson gson = new GsonBuilder()
                 .disableHtmlEscaping()
@@ -34,6 +34,6 @@ public class GHsonBuilder {
         // for geojson we could rely on external libs instead of inventing our own:
         // https://github.com/filosganga/geogson or https://github.com/3sidedcube/Android-GeoGson
 
-        return new GHsonGson(gson);
+        return new GHJsonGson(gson);
     }
 }

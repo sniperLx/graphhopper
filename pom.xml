@@ -75,7 +75,7 @@
         <module>reader-osm</module>
         <module>tools</module>
         <module>web</module>
-        <module>reader-gson</module>
+        <module>reader-json</module>
     </modules>
     <prerequisites>
         <maven>3.2</maven>

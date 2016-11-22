@@ -31,9 +31,9 @@ import java.io.Reader;
  */
 public class JsonFeatureConverter {
     private final FeedOverlayData feedOverlayData;
-    private final GHson ghson;
+    private final GHJson ghson;
 
-    public JsonFeatureConverter(GHson ghson, FeedOverlayData feedOverlayData) {
+    public JsonFeatureConverter(GHJson ghson, FeedOverlayData feedOverlayData) {
         this.ghson = ghson;
         this.feedOverlayData = feedOverlayData;
     }

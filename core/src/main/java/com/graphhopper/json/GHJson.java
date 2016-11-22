@@ -25,7 +25,7 @@ import java.io.Reader;
  *
  * @author Peter Karich
  */
-public interface GHson {
+public interface GHJson {
     /**
      * This method reads JSON data from the provided source and creates an instance of the provided
      * class.

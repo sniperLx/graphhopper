@@ -20,13 +20,13 @@ package com.graphhopper.http;
 import com.google.inject.AbstractModule;
 import com.google.inject.name.Names;
 import com.graphhopper.GraphHopper;
-import com.graphhopper.json.GHson;
-import com.graphhopper.json.GHsonBuilder;
+import com.graphhopper.json.GHJsonBuilder;
 import com.graphhopper.reader.osm.GraphHopperOSM;
 import com.graphhopper.util.CmdArgs;
 import com.graphhopper.util.TranslationMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.graphhopper.json.GHJson;
 
 /**
  * @author Peter Karich
@@ -76,7 +76,7 @@ public class DefaultModule extends AbstractModule {
             bind(RouteSerializer.class).toInstance(new SimpleRouteSerializer(graphHopper.getGraphHopperStorage().getBounds()));
 
             // should be thread safe
-            bind(GHson.class).toInstance(new GHsonBuilder().create());
+            bind(GHJson.class).toInstance(new GHJsonBuilder().create());
         } catch (Exception ex) {
             throw new IllegalStateException("Couldn't load graph", ex);
         }

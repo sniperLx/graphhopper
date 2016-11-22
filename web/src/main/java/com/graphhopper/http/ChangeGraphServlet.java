@@ -18,7 +18,6 @@
 package com.graphhopper.http;
 
 import com.graphhopper.GraphHopper;
-import com.graphhopper.json.GHson;
 import com.graphhopper.json.geo.JsonFeatureCollection;
 import com.graphhopper.reader.overlaydata.ChangeGraphResponse;
 import com.graphhopper.util.Helper;
@@ -30,6 +29,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
+import com.graphhopper.json.GHJson;
 
 /**
  *
@@ -40,7 +40,7 @@ public class ChangeGraphServlet extends GHBaseServlet {
     @Inject
     private GraphHopper hopper;
     @Inject
-    private GHson gson;
+    private GHJson gson;
 
     @Override
     protected void doPost(HttpServletRequest httpReq, HttpServletResponse httpRes) throws ServletException, IOException {

@@ -24,10 +24,10 @@ import java.io.Reader;
 /**
  * @author Peter Karich
  */
-public class GHsonGson implements GHson {
+public class GHJsonGson implements GHJson {
     private final Gson gson;
 
-    public GHsonGson(Gson gson) {
+    public GHJsonGson(Gson gson) {
         this.gson = gson;
     }
 
