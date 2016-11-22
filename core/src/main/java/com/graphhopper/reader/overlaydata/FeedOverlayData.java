@@ -17,10 +17,8 @@
  */
 package com.graphhopper.reader.overlaydata;
 
-import com.graphhopper.json.GHson;
 import com.graphhopper.json.geo.Geometry;
 import com.graphhopper.json.geo.JsonFeature;
-import com.graphhopper.json.geo.JsonFeatureCollection;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.EncodingManager;
@@ -40,7 +38,6 @@ import gnu.trove.set.hash.TIntHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -106,8 +103,7 @@ public class FeedOverlayData {
         Map<String, Object> props = jsonFeature.getProperties();
         while (iter.hasNext()) {
             int edgeId = iter.next();
-            EdgeIteratorState edge = graph.getEdgeIteratorState(edgeId, Integer.MIN_VALUE);
-
+            EdgeIteratorState edge = graph.getEdgeIteratorState(edgeId, Integer.MIN_VALUE);            
             if (props.containsKey("access")) {
                 boolean value = (boolean) props.get("access");
                 updates++;

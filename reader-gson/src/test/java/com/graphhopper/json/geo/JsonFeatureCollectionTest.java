@@ -19,8 +19,6 @@ package com.graphhopper.json.geo;
 
 import com.graphhopper.json.GHson;
 import com.graphhopper.json.GHsonBuilder;
-import com.graphhopper.json.geo.JsonFeature;
-import com.graphhopper.json.geo.JsonFeatureCollection;
 import com.graphhopper.util.Helper;
 import org.junit.Test;
 

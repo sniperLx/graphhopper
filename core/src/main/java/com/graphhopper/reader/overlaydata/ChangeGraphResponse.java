@@ -21,10 +21,10 @@ package com.graphhopper.reader.overlaydata;
  *
  * @author Peter Karich
  */
-public class GraphChangeResponse {
+public class ChangeGraphResponse {
     private final long updateCount;
 
-    public GraphChangeResponse(long updateCount) {
+    public ChangeGraphResponse(long updateCount) {
         this.updateCount = updateCount;
     }
 

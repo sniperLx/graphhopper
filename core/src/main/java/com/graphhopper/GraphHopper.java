@@ -25,7 +25,7 @@ import com.graphhopper.reader.dem.ElevationProvider;
 import com.graphhopper.reader.dem.SRTMProvider;
 import com.graphhopper.reader.dem.TunnelElevationInterpolator;
 import com.graphhopper.reader.overlaydata.FeedOverlayData;
-import com.graphhopper.reader.overlaydata.GraphChangeResponse;
+import com.graphhopper.reader.overlaydata.ChangeGraphResponse;
 import com.graphhopper.routing.*;
 import com.graphhopper.routing.ch.CHAlgoFactoryDecorator;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
@@ -1080,17 +1080,18 @@ public class GraphHopper implements GraphHopperAPI {
         }
     }
 
-    public GraphChangeResponse changeGraph(Collection<JsonFeature> collection) {
-        // TODO make an exception if called BEFORE preparation
-        if(getCHFactoryDecorator().isEnabled())
-            throw new IllegalStateException("To use the changeGraph API you need to turn off CH");
-        
+    public ChangeGraphResponse changeGraph(Collection<JsonFeature> collection) {
+        // TODO make readWriteLock accessible for outside usage?
+        // TODO allow calling this method if called before CH preparation
+        if (getCHFactoryDecorator().isEnabled())
+            throw new IllegalArgumentException("To use the changeGraph API you need to turn off CH");
+
         Lock writeLock = readWriteLock.writeLock();
         writeLock.lock();
         try {
             FeedOverlayData overlay = new FeedOverlayData(ghStorage, encodingManager, locationIndex);
-            long updateCount = overlay.applyChanges(collection);            
-            return new GraphChangeResponse(updateCount);
+            long updateCount = overlay.applyChanges(collection);
+            return new ChangeGraphResponse(updateCount);
         } finally {
             writeLock.unlock();
         }
