@@ -108,16 +108,15 @@ public class Parameters {
          * default heading penalty in seconds
          */
         public static final double DEFAULT_HEADING_PENALTY = 300;
-        public static final String HEADING_PENALTY = "heading_penalty";
+        public static final String HEADING_PENALTY = "heading_penalty";     
         /**
-         * Blocking Settings
+         * block road access via ';'-separated list of lat,lon or lat,lon,radius
          */
-        public static final String BLOCKED_EDGES = "blocked_edges";
         public static final String BLOCKED_POINTS = "blocked_points";
-        public static final String BLOCKED_RECTANGULAR_AREAS = "blocked_rectangular_areas";
-        public static final String BLOCKED_CIRCULAR_AREAS = "blocked_circular_areas";
-        public static final String BLOCK_BY_SHAPE = "block_by_shape";
-        public static final String BLOCKED_SHAPES = "blocked_shapes";
+        /**
+         * block road access via ';'-separated list of left,bottom,
+         */
+        public static final String BLOCKED_RECTANGULAR_AREAS = "blocked_areas";
     }
 
     /**

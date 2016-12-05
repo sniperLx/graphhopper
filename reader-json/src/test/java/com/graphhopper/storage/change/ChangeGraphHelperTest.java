@@ -1,4 +1,4 @@
-package com.graphhopper.reader.overlaydata;
+package com.graphhopper.storage.change;
 
 import com.graphhopper.json.GHJson;
 import com.graphhopper.json.GHJsonBuilder;
@@ -10,7 +10,6 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.storage.GraphBuilder;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.RAMDirectory;
-import com.graphhopper.storage.change.ChangeGraphHelper;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.util.GHUtility;
@@ -26,7 +25,7 @@ import static org.junit.Assert.*;
 /**
  * @author Peter Karich
  */
-public class FeedOverlayDataTest {
+public class ChangeGraphHelperTest {
     private EncodingManager encodingManager;
     private GraphHopperStorage graph;
     private GHJson ghson;

@@ -38,12 +38,13 @@ import java.util.List;
 /**
  * This class allows to find edges or construct shapes from some edge and shape filter.
  *
- * TODO: Add Tests for this class (There are integration but no Unit tests)
- *
  * @author Robin Boldt
  */
 public class GraphEdgeIdFinder {
 
+    // internal properties
+    public static final String BLOCKED_EDGES = "graph_finder.blocked_edges";
+    public static final String BLOCKED_SHAPES = "graph_finder.blocked_shapes";
     private final Graph graph;
     private final LocationIndex locationIndex;
 
@@ -123,36 +124,11 @@ public class GraphEdgeIdFinder {
     public ConfigMap parseStringHints(ConfigMap cMap, HintsMap hints, EdgeFilter filter) {
         final String objectSeparator = ";";
         final String innerObjSep = ",";
+        // use shapes if bigger than 1km^2
+        final double shapeArea = 1000 * 1000;
 
         final GHIntHashSet blockedEdges = new GHIntHashSet();
         final List<Shape> blockedShapes = new ArrayList<>();
-        // We still need EdgeIds for point blocking
-        final boolean blockByShape = hints.getBool(BLOCK_BY_SHAPE, true);
-
-        // Add blocked edges
-        String blockedEdgesStr = hints.get(BLOCKED_EDGES, "");
-        if (!blockedEdgesStr.isEmpty()) {
-            String[] blockedEdgesArr = blockedEdgesStr.split(objectSeparator);
-            for (int i = 0; i < blockedEdgesArr.length; i++) {
-                blockedEdges.add(Integer.parseInt(blockedEdgesArr[i]));
-            }
-        }
-
-        // Add blocked points
-        String blockedPointsStr = hints.get(BLOCKED_POINTS, "");
-        if (!blockedPointsStr.isEmpty()) {
-            String[] blockedPointsArr = blockedPointsStr.split(objectSeparator);
-            for (int i = 0; i < blockedPointsArr.length; i++) {
-                String object = blockedPointsArr[i];
-                String[] splittedObject = object.split(innerObjSep);
-                if (splittedObject.length != 2)
-                    throw new IllegalArgumentException(object + " at index " + i + " need to be defined as lat,lon");
-
-                double lat = Double.parseDouble(splittedObject[2 * i]);
-                double lon = Double.parseDouble(splittedObject[2 * i + 1]);
-                findClosestEdge(blockedEdges, lat, lon, filter);
-            }
-        }
 
         // Add blocked rectangular areas
         String blockedAreasStr = hints.get(BLOCKED_RECTANGULAR_AREAS, "");
@@ -170,31 +146,36 @@ public class GraphEdgeIdFinder {
                 double top = Double.parseDouble(splittedObject[4 * i + 3]);
 
                 final BBox bbox = new BBox(left, right, bottom, top);
-                if (blockByShape)
+                if (bbox.calculateArea() > shapeArea)
                     blockedShapes.add(bbox);
                 else
                     findEdgesInShape(blockedEdges, bbox, filter);
             }
         }
 
-        // Add blocked circular areas
-        String blockedCircularAreasStr = hints.get(BLOCKED_CIRCULAR_AREAS, "");
+        // Add blocked circular areas or points
+        String blockedCircularAreasStr = hints.get(BLOCKED_POINTS, "");
         if (!blockedCircularAreasStr.isEmpty()) {
             String[] blockedCircularAreasArr = blockedCircularAreasStr.split(objectSeparator);
             for (int i = 0; i < blockedCircularAreasArr.length; i++) {
                 String object = blockedCircularAreasArr[i];
                 String[] splittedObject = object.split(innerObjSep);
-                if (splittedObject.length != 3)
-                    throw new IllegalArgumentException(object + " at index " + i + " need to be defined as lat,lon,radius");
-
-                double lat = Double.parseDouble(splittedObject[3 * i]);
-                double lon = Double.parseDouble(splittedObject[3 * i + 1]);
-                int radius = Integer.parseInt(splittedObject[3 * i + 2]);
-                Circle circle = new Circle(lat, lon, radius);
-                if (blockByShape) {
-                    blockedShapes.add(circle);
+                if (splittedObject.length == 3) {
+                    double lat = Double.parseDouble(splittedObject[0]);
+                    double lon = Double.parseDouble(splittedObject[1]);
+                    int radius = Integer.parseInt(splittedObject[2]);
+                    Circle circle = new Circle(lat, lon, radius);
+                    if (circle.calculateArea() > shapeArea) {
+                        blockedShapes.add(circle);
+                    } else {
+                        findEdgesInShape(blockedEdges, circle, filter);
+                    }
+                } else if (splittedObject.length == 2) {
+                    double lat = Double.parseDouble(splittedObject[0]);
+                    double lon = Double.parseDouble(splittedObject[1]);
+                    findClosestEdge(blockedEdges, lat, lon, filter);
                 } else {
-                    findEdgesInShape(blockedEdges, circle, filter);
+                    throw new IllegalArgumentException(object + " at index " + i + " need to be defined as lat,lon or lat,lon,radius");
                 }
             }
         }

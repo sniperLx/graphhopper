@@ -49,4 +49,9 @@ public interface Shape {
      * @return The center of the shape, if applicable
      */
     GHPoint getCenter();
+
+    /**
+     * @return an estimated area in m^2
+     */
+    double calculateArea();
 }

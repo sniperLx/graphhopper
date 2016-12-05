@@ -20,6 +20,7 @@ package com.graphhopper.routing.weighting;
 import com.graphhopper.coll.GHIntHashSet;
 import com.graphhopper.routing.util.DataFlagEncoder;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.GraphEdgeIdFinder;
 import com.graphhopper.util.ConfigMap;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.Parameters.Routing;
@@ -69,8 +70,8 @@ public class GenericWeighting extends AbstractWeighting {
 
         maxSpeed = tmpSpeed / SPEED_CONV;
         accessType = gEncoder.getAccessType("motor_vehicle");
-        blockedEdges = cMap.get(Routing.BLOCKED_EDGES, new GHIntHashSet(0));
-        blockedShapes = cMap.get(Routing.BLOCKED_SHAPES, Collections.EMPTY_LIST);
+        blockedEdges = cMap.get(GraphEdgeIdFinder.BLOCKED_EDGES, new GHIntHashSet(0));
+        blockedShapes = cMap.get(GraphEdgeIdFinder.BLOCKED_SHAPES, Collections.EMPTY_LIST);
     }
 
     @Override

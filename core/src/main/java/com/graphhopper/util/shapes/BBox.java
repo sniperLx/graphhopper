@@ -250,4 +250,15 @@ public class BBox implements Shape, Cloneable {
 
         return list;
     }
+
+    /**
+     * @return an estimated area in m^2 using the mean value of latitudes for longitude distance
+     */
+    @Override
+    public double calculateArea() {
+        double meanLat = (maxLat + minLat) / 2;
+        return Helper.DIST_PLANE.calcDist(meanLat, minLon, meanLat, maxLon)
+                // left side should be equal to right side no mean value necessary
+                * Helper.DIST_PLANE.calcDist(minLat, minLon, maxLat, minLon);
+    }
 }

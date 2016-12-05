@@ -64,7 +64,7 @@ public class Circle implements Shape {
 
     @Override
     public GHPoint getCenter() {
-        return new GHPoint(lat,lon);
+        return new GHPoint(lat, lon);
     }
 
     private double normDist(double lat1, double lon1) {
@@ -156,5 +156,10 @@ public class Circle implements Shape {
     @Override
     public String toString() {
         return lat + "," + lon + ", radius:" + radiusInMeter;
+    }
+
+    @Override
+    public double calculateArea() {
+        return Math.PI * radiusInMeter * radiusInMeter;
     }
 }
