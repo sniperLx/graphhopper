@@ -30,6 +30,7 @@ import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.util.ConfigMap;
 import com.graphhopper.util.Parameters;
+import com.graphhopper.util.shapes.Circle;
 import com.graphhopper.util.shapes.Shape;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +65,7 @@ public class GraphEdgeIdFinderTest {
                 .prepareIndex();
 
         HintsMap hints = new HintsMap();
-        hints.put(Parameters.Routing.BLOCK_AREA, "0.01, 0.005");
+        hints.put(Parameters.Routing.BLOCK_AREA, "0.01,0.005,1");
 
         ConfigMap cMap = new ConfigMap();
         GraphEdgeIdFinder graphFinder = new GraphEdgeIdFinder(graph, locationIndex);
@@ -73,8 +74,15 @@ public class GraphEdgeIdFinderTest {
         GHIntHashSet blockedEdges = new GHIntHashSet();
         blockedEdges.add(0);
         assertEquals(blockedEdges, result.get(BLOCKED_EDGES, new GHIntHashSet()));
-        List<Shape> blockedShapes = new ArrayList<Shape>();
-        assertEquals(blockedShapes, result.get(BLOCKED_SHAPES, new ArrayList<Shape>()));
-    }
+        List<Shape> blockedShapes = new ArrayList<>();
+        assertEquals(blockedShapes, result.get(BLOCKED_SHAPES, new ArrayList<>()));
 
+        // big area converts into shapes
+        hints.put(Parameters.Routing.BLOCK_AREA, "0,0,1000");
+        result = graphFinder.parseStringHints(cMap, hints, new DefaultEdgeFilter(encoder));
+        blockedEdges.clear();
+        assertEquals(blockedEdges, result.get(BLOCKED_EDGES, new GHIntHashSet()));
+        blockedShapes.add(new Circle(0, 0, 1000));
+        assertEquals(blockedShapes, result.get(BLOCKED_SHAPES, new ArrayList<>()));
+    }
 }

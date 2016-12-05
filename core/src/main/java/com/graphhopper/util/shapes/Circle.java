@@ -19,6 +19,7 @@ package com.graphhopper.util.shapes;
 
 import com.graphhopper.util.DistanceCalc;
 import com.graphhopper.util.Helper;
+import com.graphhopper.util.NumHelper;
 
 /**
  * @author Peter Karich
@@ -154,12 +155,31 @@ public class Circle implements Shape {
     }
 
     @Override
-    public String toString() {
-        return lat + "," + lon + ", radius:" + radiusInMeter;
+    public double calculateArea() {
+        return Math.PI * radiusInMeter * radiusInMeter;
     }
 
     @Override
-    public double calculateArea() {
-        return Math.PI * radiusInMeter * radiusInMeter;
+    public boolean equals(Object obj) {
+        if (obj == null)
+            return false;
+
+        Circle b = (Circle) obj;
+        // equals within a very small range
+        return NumHelper.equalsEps(lat, b.lat) && NumHelper.equalsEps(lon, b.lon) && NumHelper.equalsEps(radiusInMeter, b.radiusInMeter);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 17 * hash + (int) (Double.doubleToLongBits(this.lat) ^ (Double.doubleToLongBits(this.lat) >>> 32));
+        hash = 17 * hash + (int) (Double.doubleToLongBits(this.lon) ^ (Double.doubleToLongBits(this.lon) >>> 32));
+        hash = 17 * hash + (int) (Double.doubleToLongBits(this.radiusInMeter) ^ (Double.doubleToLongBits(this.radiusInMeter) >>> 32));
+        return hash;
+    }
+
+    @Override
+    public String toString() {
+        return lat + "," + lon + ", radius:" + radiusInMeter;
     }
 }
