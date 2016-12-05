@@ -41,8 +41,5 @@ local.properties
 .DS_Store
 /core/nbproject/
 /reader-overlay-data/nbproject/
-<<<<<<< HEAD
 !malta-latest.osm.pbf 
-=======
-/reader-gson/nbproject/
->>>>>>> change-graph-api
+/reader-json/nbproject/
