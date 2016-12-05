@@ -17,18 +17,23 @@
  */
 package com.graphhopper.json;
 
-import java.io.Reader;
+import com.graphhopper.json.geo.JsonFeature;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
- * A simple JSON (de)serialization facade. E.g. to be easily replaced with platform specific
- * implementations.
- *
  * @author Peter Karich
  */
-public interface GHson {
-    /**
-     * This method reads JSON data from the provided source and creates an instance of the provided
-     * class.
-     */
-    <T> T fromJson(Reader source, Class<T> aClass);
+public class GHJsonBuilder {
+    public GHJson create() {
+        // for now always return Gson implementation        
+        Gson gson = new GsonBuilder()
+                .disableHtmlEscaping()
+                .registerTypeHierarchyAdapter(JsonFeature.class, new FeatureJsonDeserializer())
+                .create();
+        // for geojson we could rely on external libs instead of inventing our own:
+        // https://github.com/filosganga/geogson or https://github.com/3sidedcube/Android-GeoGson
+
+        return new GHJsonGson(gson);
+    }
 }

@@ -15,90 +15,54 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.graphhopper.reader.overlaydata;
+package com.graphhopper.storage.change;
 
 import com.carrotsearch.hppc.cursors.IntCursor;
 import com.graphhopper.coll.GHIntHashSet;
-import com.graphhopper.json.GHson;
-import com.graphhopper.json.geo.Geometry;
 import com.graphhopper.json.geo.JsonFeature;
-import com.graphhopper.json.geo.JsonFeatureCollection;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.storage.Graph;
-import com.graphhopper.storage.GraphBrowser;
+import com.graphhopper.storage.GraphEdgeIdFinder;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.util.EdgeIteratorState;
-import com.graphhopper.util.PointList;
-import com.graphhopper.util.shapes.GHPoint;
+import java.util.Collection;
+import java.util.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 /**
+ * This graph applies permanent changes passed as JsonFeature to the specified graph.
+ *
  * @author Peter Karich
  */
-public class FeedOverlayData {
+public class ChangeGraphHelper {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final Graph graph;
-    private final LocationIndex locationIndex;
-    private final GHson ghson;
-    private final EncodingManager em;
-    private final GraphBrowser graphBrowser;
+    private final GraphEdgeIdFinder graphBrowser;
     private boolean enableLogging = false;
 
-    public FeedOverlayData(Graph graph, EncodingManager em, LocationIndex locationIndex, GHson ghson) {
-        this.ghson = ghson;
+    public ChangeGraphHelper(Graph graph, LocationIndex locationIndex) {
         this.graph = graph;
-        this.em = em;
-        this.locationIndex = locationIndex;
-        this.graphBrowser = new GraphBrowser(graph, locationIndex);
+        this.graphBrowser = new GraphEdgeIdFinder(graph, locationIndex);
     }
 
     public void setLogging(boolean log) {
         enableLogging = log;
     }
 
-    public long applyChanges(String fileOrFolderStr) {
-        File fileOrFolder = new File(fileOrFolderStr);
-        try {
-            if (fileOrFolder.isFile()) {
-                return applyChanges(new FileReader(fileOrFolder));
-            }
-
-            long sum = 0;
-            File[] fList = new File(fileOrFolderStr).listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return name.endsWith(".json");
-                }
-            });
-            for (File f : fList) {
-                sum += applyChanges(new FileReader(f));
-            }
-            return sum;
-
-        } catch (FileNotFoundException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
     /**
-     * This method applies changes to the graph, specified by the reader.
+     * This method applies changes to the graph, specified by the json features.
      *
      * @return number of successfully applied edge changes
      */
-    public long applyChanges(Reader reader) {
-        // read full file, later support one json feature or collection per line to avoid high mem consumption
-        JsonFeatureCollection data = ghson.fromJson(reader, JsonFeatureCollection.class);
+    public long applyChanges(EncodingManager em, Collection<JsonFeature> features) {
         long updates = 0;
-        for (JsonFeature jsonFeature : data.getFeatures()) {
+        for (JsonFeature jsonFeature : features) {
             if (!jsonFeature.hasProperties())
                 throw new IllegalArgumentException("One feature has no properties, please specify properties e.g. speed or access");
 
@@ -122,7 +86,7 @@ public class FeedOverlayData {
         EdgeFilter filter = new DefaultEdgeFilter(encoder);
         GHIntHashSet edges = new GHIntHashSet();
         if (jsonFeature.hasGeometry()) {
-            fillEdgeIDs(edges, jsonFeature.getGeometry(), filter);
+            graphBrowser.fillEdgeIDs(edges, jsonFeature.getGeometry(), filter);
         } else if (jsonFeature.getBBox() != null) {
             graphBrowser.findEdgesInShape(edges, jsonFeature.getBBox(), filter);
         } else
@@ -133,7 +97,6 @@ public class FeedOverlayData {
         while (iter.hasNext()) {
             int edgeId = iter.next().value;
             EdgeIteratorState edge = graph.getEdgeIteratorState(edgeId, Integer.MIN_VALUE);
-
             if (props.containsKey("access")) {
                 boolean value = (boolean) props.get("access");
                 updates++;
@@ -154,27 +117,5 @@ public class FeedOverlayData {
             }
         }
         return updates;
-    }
-
-    public void fillEdgeIDs(GHIntHashSet edgeIds, Geometry geometry, EdgeFilter filter) {
-        if (geometry.isPoint()) {
-            GHPoint point = geometry.asPoint();
-            graphBrowser.findClosestEdgeToPoint(edgeIds, point, filter);
-        } else if (geometry.isPointList()) {
-            PointList pl = geometry.asPointList();
-            if (geometry.getType().equals("LineString")) {
-                // TODO do map matching or routing
-                int lastIdx = pl.size() - 1;
-                if (pl.size() >= 2) {
-                    double meanLat = (pl.getLatitude(0) + pl.getLatitude(lastIdx)) / 2;
-                    double meanLon = (pl.getLongitude(0) + pl.getLongitude(lastIdx)) / 2;
-                    graphBrowser.findClosestEdge(edgeIds, meanLat, meanLon, filter);
-                }
-            } else {
-                for (int i = 0; i < pl.size(); i++) {
-                    graphBrowser.findClosestEdge(edgeIds, pl.getLatitude(i), pl.getLongitude(i), filter);
-                }
-            }
-        }
     }
 }

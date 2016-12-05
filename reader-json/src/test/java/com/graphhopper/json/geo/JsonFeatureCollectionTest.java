@@ -17,8 +17,8 @@
  */
 package com.graphhopper.json.geo;
 
-import com.graphhopper.json.GHson;
-import com.graphhopper.json.GHsonBuilder;
+import com.graphhopper.json.GHJson;
+import com.graphhopper.json.GHJsonBuilder;
 import com.graphhopper.util.Helper;
 import org.junit.Test;
 
@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
  * @author Peter Karich
  */
 public class JsonFeatureCollectionTest {
-    private final GHson ghson = new GHsonBuilder().create();
+    private final GHJson ghson = new GHJsonBuilder().create();
 
     @Test
     public void testDeserialization() {
@@ -63,5 +63,4 @@ public class JsonFeatureCollectionTest {
         Reader reader = new InputStreamReader(getClass().getResourceAsStream(name), Helper.UTF_CS);
         return ghson.fromJson(reader, JsonFeatureCollection.class);
     }
-
 }

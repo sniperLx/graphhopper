@@ -1,7 +1,8 @@
 package com.graphhopper.reader.overlaydata;
 
-import com.graphhopper.json.GHson;
-import com.graphhopper.json.GHsonBuilder;
+import com.graphhopper.json.GHJson;
+import com.graphhopper.json.GHJsonBuilder;
+import com.graphhopper.json.JsonFeatureConverter;
 import com.graphhopper.routing.AbstractRoutingAlgorithmTester;
 import com.graphhopper.routing.util.AllEdgesIterator;
 import com.graphhopper.routing.util.EncodingManager;
@@ -9,6 +10,7 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.storage.GraphBuilder;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.RAMDirectory;
+import com.graphhopper.storage.change.ChangeGraphHelper;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.util.GHUtility;
@@ -27,13 +29,13 @@ import static org.junit.Assert.*;
 public class FeedOverlayDataTest {
     private EncodingManager encodingManager;
     private GraphHopperStorage graph;
-    private GHson ghson;
+    private GHJson ghson;
 
     @Before
     public void setUp() {
         encodingManager = new EncodingManager("car");
         graph = new GraphBuilder(encodingManager).create();
-        ghson = new GHsonBuilder().create();
+        ghson = new GHJsonBuilder().create();
     }
 
     @Test
@@ -62,9 +64,10 @@ public class FeedOverlayDataTest {
             assertTrue(encoder.isForward(flags));
         }
 
-        FeedOverlayData instance = new FeedOverlayData(graph, encodingManager, locationIndex, ghson);
         Reader reader = new InputStreamReader(getClass().getResourceAsStream("overlaydata1.json"), Helper.UTF_CS);
-        long updates = instance.applyChanges(reader);
+        ChangeGraphHelper instance = new ChangeGraphHelper(graph, locationIndex);
+        JsonFeatureConverter converter = new JsonFeatureConverter(ghson, instance, encodingManager);
+        long updates = converter.applyChanges(reader);
         assertEquals(2, updates);
 
         // assert changed speed and access

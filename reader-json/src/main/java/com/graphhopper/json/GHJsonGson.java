@@ -18,23 +18,21 @@
 package com.graphhopper.json;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.graphhopper.json.geo.FeatureJsonDeserializer;
-import com.graphhopper.json.geo.JsonFeature;
+
+import java.io.Reader;
 
 /**
  * @author Peter Karich
  */
-public class GHsonBuilder {
-    public GHson create() {
-        // for now always return Gson implementation        
-        Gson gson = new GsonBuilder()
-                .disableHtmlEscaping()
-                .registerTypeHierarchyAdapter(JsonFeature.class, new FeatureJsonDeserializer())
-                .create();
-        // for geojson we could rely on external libs instead of inventing our own:
-        // https://github.com/filosganga/geogson or https://github.com/3sidedcube/Android-GeoGson
+public class GHJsonGson implements GHJson {
+    private final Gson gson;
 
-        return new GHsonGson(gson);
+    public GHJsonGson(Gson gson) {
+        this.gson = gson;
+    }
+
+    @Override
+    public <T> T fromJson(Reader source, Class<T> aClass) {
+        return gson.fromJson(source, aClass);
     }
 }

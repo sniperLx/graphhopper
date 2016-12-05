@@ -17,22 +17,18 @@
  */
 package com.graphhopper.json;
 
-import com.google.gson.Gson;
-
 import java.io.Reader;
 
 /**
+ * A simple JSON (de)serialization facade. E.g. to be easily replaced with platform specific
+ * implementations.
+ *
  * @author Peter Karich
  */
-public class GHsonGson implements GHson {
-    private final Gson gson;
-
-    public GHsonGson(Gson gson) {
-        this.gson = gson;
-    }
-
-    @Override
-    public <T> T fromJson(Reader source, Class<T> aClass) {
-        return gson.fromJson(source, aClass);
-    }
+public interface GHJson {
+    /**
+     * This method reads JSON data from the provided source and creates an instance of the provided
+     * class.
+     */
+    <T> T fromJson(Reader source, Class<T> aClass);
 }

@@ -18,12 +18,12 @@
 package com.graphhopper.storage;
 
 /**
- * A write lock. Influenced by Lucene code
+ * A write lock interface. Influenced by Lucene code
  * <p>
  *
  * @author Peter Karich
  */
-public interface Lock {
+public interface GHLock {
     String getName();
 
     boolean tryLock();
