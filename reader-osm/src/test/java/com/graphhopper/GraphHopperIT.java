@@ -40,7 +40,7 @@ import static org.junit.Assert.*;
  * @author Peter Karich
  */
 public class GraphHopperIT {
-    
+
     public static final String DIR = "../core/files";
     private static final String graphFileFoot = "target/graphhopperIT-foot";
     private static final String osmFile = DIR + "/monaco.osm.gz";
@@ -232,14 +232,14 @@ public class GraphHopperIT {
                 setEncodingManager(new EncodingManager("car,generic", 8));
         tmpHopper.importOrLoad();
 
-        GHRequest req = new GHRequest(49.985307,11.50628, 49.985731,11.507465).
+        GHRequest req = new GHRequest(49.985307, 11.50628, 49.985731, 11.507465).
                 setVehicle("car").setWeighting("fastest");
 
         GHResponse rsp = tmpHopper.route(req);
         assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
         assertEquals(550, rsp.getBest().getDistance(), 1);
 
-        req = new GHRequest(49.985307,11.50628, 49.985731,11.507465).
+        req = new GHRequest(49.985307, 11.50628, 49.985731, 11.507465).
                 setVehicle("generic").setWeighting("generic");
 
         rsp = tmpHopper.route(req);
@@ -256,7 +256,7 @@ public class GraphHopperIT {
                 setEncodingManager(new EncodingManager("generic", 4));
         tmpHopper.importOrLoad();
 
-        GHRequest req = new GHRequest(49.985272,11.506151, 49.986107,11.507202).
+        GHRequest req = new GHRequest(49.985272, 11.506151, 49.986107, 11.507202).
                 setVehicle("generic").setWeighting("generic");
 
         GHResponse rsp = tmpHopper.route(req);
@@ -264,57 +264,42 @@ public class GraphHopperIT {
         assertEquals(122, rsp.getBest().getDistance(), 1);
 
         // block point 49.985759,11.50687
-        req.getHints().put(Routing.BLOCKED_POINTS, "49.985759,11.50687");
+        req.getHints().put(Routing.BLOCK_AREA, "49.985759,11.50687");
         rsp = tmpHopper.route(req);
         assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
         assertEquals(365, rsp.getBest().getDistance(), 1);
 
-
-        req = new GHRequest(49.975845,11.522598, 50.026821,11.497364).
+        req = new GHRequest(49.975845, 11.522598, 50.026821, 11.497364).
                 setVehicle("generic").setWeighting("generic");
 
         rsp = tmpHopper.route(req);
         assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
         assertEquals(6684, rsp.getBest().getDistance(), 1);
 
-        // block by area 11.472902,49.97986,11.534357,50.003946
-        req.getHints().put(Routing.BLOCKED_RECTANGULAR_AREAS, "11.472902,49.97986,11.534357,50.003946");
+        // block by area
+        String someArea = "49.97986,11.472902,50.003946,11.534357";
+        req.getHints().put(Routing.BLOCK_AREA, someArea);
         rsp = tmpHopper.route(req);
         assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
         assertEquals(12173, rsp.getBest().getDistance(), 1);
 
-        // Add blocked point to above area, to increase detour
-        // block point 50.017578,11.547527
-        req.getHints().put(Routing.BLOCKED_POINTS, "50.017578,11.547527");
+        // Add blocked point to above area, to increase detour        
+        req.getHints().put(Routing.BLOCK_AREA, "50.017578,11.547527;" + someArea);
         rsp = tmpHopper.route(req);
         assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
         assertEquals(16674, rsp.getBest().getDistance(), 1);
 
-        // block by shape
-        // TODO req.getHints().put(Routing.BLOCK_BY_SHAPE, "true");
+        // block by edge IDs -> i.e. use small circular area
+        req.getHints().put(Routing.BLOCK_AREA, "49.981599,11.517448,100");
         rsp = tmpHopper.route(req);
         assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
-        assertEquals(16674, rsp.getBest().getDistance(), 1);
+        assertEquals(6879, rsp.getBest().getDistance(), 1);
 
-        req = new GHRequest(49.975845,11.522598, 50.026821,11.497364).
-                setVehicle("generic").setWeighting("generic");
-
+        // block by edge IDs -> i.e. use small rectangular area
+        req.getHints().put(Routing.BLOCK_AREA, "49.981875,11.515818,49.981088,11.519423");
         rsp = tmpHopper.route(req);
         assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
-        assertEquals(6684, rsp.getBest().getDistance(), 1);
-
-        req.getHints().put(Routing.BLOCKED_POINTS, "50.004871,11.51762,2000");
-        rsp = tmpHopper.route(req);
-        assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
-        assertEquals(18151, rsp.getBest().getDistance(), 1);
-
-        // block by shape
-        // TODO req.getHints().put(Routing.BLOCK_BY_SHAPE, "true");
-        rsp = tmpHopper.route(req);
-        assertFalse(rsp.getErrors().toString(), rsp.hasErrors());
-        assertEquals(18151, rsp.getBest().getDistance(), 1);
-
-
+        assertEquals(6879, rsp.getBest().getDistance(), 1);
     }
 
     @Test

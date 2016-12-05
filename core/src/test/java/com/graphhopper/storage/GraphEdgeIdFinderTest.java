@@ -64,7 +64,7 @@ public class GraphEdgeIdFinderTest {
                 .prepareIndex();
 
         HintsMap hints = new HintsMap();
-        hints.put(Parameters.Routing.BLOCKED_POINTS, "0.01, 0.005");
+        hints.put(Parameters.Routing.BLOCK_AREA, "0.01, 0.005");
 
         ConfigMap cMap = new ConfigMap();
         GraphEdgeIdFinder graphFinder = new GraphEdgeIdFinder(graph, locationIndex);

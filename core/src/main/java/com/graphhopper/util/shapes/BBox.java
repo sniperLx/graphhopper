@@ -261,4 +261,34 @@ public class BBox implements Shape, Cloneable {
                 // left side should be equal to right side no mean value necessary
                 * Helper.DIST_PLANE.calcDist(minLat, minLon, maxLat, minLon);
     }
+
+    /**
+     * This method creates a BBox out of a string in format lat1,lon1,lat2,lon2
+     */
+    public static BBox parseTwoPoints(String objectAsString) {
+        String[] splittedObject = objectAsString.split(",");
+
+        if (splittedObject.length != 4)
+            throw new IllegalArgumentException("BBox should have 4 parts but was " + objectAsString);
+
+        double minLat = Double.parseDouble(splittedObject[0]);
+        double minLon = Double.parseDouble(splittedObject[1]);
+
+        double maxLat = Double.parseDouble(splittedObject[2]);
+        double maxLon = Double.parseDouble(splittedObject[3]);
+
+        if (minLat > maxLat) {
+            double tmp = minLat;
+            minLat = maxLat;
+            maxLat = tmp;
+        }
+
+        if (minLon > maxLon) {
+            double tmp = minLon;
+            minLon = maxLon;
+            maxLon = tmp;
+        }
+
+        return new BBox(minLon, maxLon, minLat, maxLat);
+    }
 }

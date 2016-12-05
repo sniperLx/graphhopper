@@ -74,6 +74,9 @@ public class GraphEdgeIdFinder {
         if (!qr.isValid())
             return;
 
+        if (shape.contains(qr.getSnappedPoint().lat, qr.getSnappedPoint().lon))
+            edgeIds.add(qr.getClosestEdge().getEdge());
+
         BreadthFirstSearch bfs = new BreadthFirstSearch() {
             final NodeAccess na = graph.getNodeAccess();
             final Shape localShape = shape;
@@ -130,37 +133,20 @@ public class GraphEdgeIdFinder {
         final GHIntHashSet blockedEdges = new GHIntHashSet();
         final List<Shape> blockedShapes = new ArrayList<>();
 
-        // Add blocked rectangular areas
-        String blockedAreasStr = hints.get(BLOCKED_RECTANGULAR_AREAS, "");
-        if (!blockedAreasStr.isEmpty()) {
-            String[] blockedAreasArr = blockedAreasStr.split(objectSeparator);
-            for (int i = 0; i < blockedAreasArr.length; i++) {
-                String object = blockedAreasArr[i];
-                String[] splittedObject = object.split(innerObjSep);
-                if (splittedObject.length != 4)
-                    throw new IllegalArgumentException(object + " at index " + i + " need to be defined as left,bottom,right,top");
-
-                double left = Double.parseDouble(splittedObject[4 * i]);
-                double bottom = Double.parseDouble(splittedObject[4 * i + 1]);
-                double right = Double.parseDouble(splittedObject[4 * i + 2]);
-                double top = Double.parseDouble(splittedObject[4 * i + 3]);
-
-                final BBox bbox = new BBox(left, right, bottom, top);
-                if (bbox.calculateArea() > shapeArea)
-                    blockedShapes.add(bbox);
-                else
-                    findEdgesInShape(blockedEdges, bbox, filter);
-            }
-        }
-
         // Add blocked circular areas or points
-        String blockedCircularAreasStr = hints.get(BLOCKED_POINTS, "");
+        String blockedCircularAreasStr = hints.get(BLOCK_AREA, "");
         if (!blockedCircularAreasStr.isEmpty()) {
             String[] blockedCircularAreasArr = blockedCircularAreasStr.split(objectSeparator);
             for (int i = 0; i < blockedCircularAreasArr.length; i++) {
-                String object = blockedCircularAreasArr[i];
-                String[] splittedObject = object.split(innerObjSep);
-                if (splittedObject.length == 3) {
+                String objectAsString = blockedCircularAreasArr[i];
+                String[] splittedObject = objectAsString.split(innerObjSep);
+                if (splittedObject.length == 4) {
+                    final BBox bbox = BBox.parseTwoPoints(objectAsString);
+                    if (bbox.calculateArea() > shapeArea)
+                        blockedShapes.add(bbox);
+                    else
+                        findEdgesInShape(blockedEdges, bbox, filter);
+                } else if (splittedObject.length == 3) {
                     double lat = Double.parseDouble(splittedObject[0]);
                     double lon = Double.parseDouble(splittedObject[1]);
                     int radius = Integer.parseInt(splittedObject[2]);
@@ -175,7 +161,8 @@ public class GraphEdgeIdFinder {
                     double lon = Double.parseDouble(splittedObject[1]);
                     findClosestEdge(blockedEdges, lat, lon, filter);
                 } else {
-                    throw new IllegalArgumentException(object + " at index " + i + " need to be defined as lat,lon or lat,lon,radius");
+                    throw new IllegalArgumentException(objectAsString + " at index " + i + " need to be defined as lat,lon "
+                            + "or as a circle lat,lon,radius or rectangular lat1,lon1,lat2,lon2");
                 }
             }
         }

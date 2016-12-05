@@ -650,7 +650,7 @@ public class GraphHopper implements GraphHopperAPI {
         maxVisitedNodes = args.getInt(Routing.INIT_MAX_VISITED_NODES, Integer.MAX_VALUE);
         maxRoundTripRetries = args.getInt(RoundTrip.INIT_MAX_RETRIES, maxRoundTripRetries);
         nonChMaxWaypointDistance = args.getInt(Parameters.NON_CH.MAX_NON_CH_POINT_DISTANCE, Integer.MAX_VALUE);
-        blockedRectangularAreas = args.get(Routing.BLOCKED_RECTANGULAR_AREAS, "");
+        blockedRectangularAreas = args.get(Routing.BLOCK_AREA, "");
 
         return this;
     }
@@ -934,10 +934,10 @@ public class GraphHopper implements GraphHopperAPI {
             // add default blocked rectangular areas from config properties
             if (!this.blockedRectangularAreas.isEmpty()) {
                 String val = this.blockedRectangularAreas;
-                String blockedAreasFromRequest = hintsMap.get(Parameters.Routing.BLOCKED_RECTANGULAR_AREAS, "");
+                String blockedAreasFromRequest = hintsMap.get(Parameters.Routing.BLOCK_AREA, "");
                 if (!blockedAreasFromRequest.isEmpty())
                     val += ";" + blockedAreasFromRequest;
-                cMap.put(Parameters.Routing.BLOCKED_RECTANGULAR_AREAS, val);
+                hintsMap.put(Parameters.Routing.BLOCK_AREA, val);
             }
 
             cMap = new GraphEdgeIdFinder(graph, locationIndex).parseStringHints(cMap, hintsMap, new DefaultEdgeFilter(encoder));
