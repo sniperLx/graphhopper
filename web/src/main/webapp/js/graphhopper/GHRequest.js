@@ -265,19 +265,6 @@ GHRequest.prototype.setLocale = function (locale) {
         this.api_params.locale = locale;
 };
 
-GHRequest.prototype.setBlockingArea = function (blockingArea) {
-    this.api_params.block_area = blockingArea;
-    if(blockingArea){
-        this.api_params["ch.disable"] = true;
-    }
-};
-
-GHRequest.prototype.getBlockingArea = function (blockingArea) {
-    if(!this.api_params.block_area || this.api_params.block_area.length == 0)
-        return null;
-    return this.api_params.block_area;
-};
-
 GHRequest.prototype.fetchTranslationMap = function (urlLocaleParam) {
     if (!urlLocaleParam)
         // let servlet figure out the locale from the Accept-Language header

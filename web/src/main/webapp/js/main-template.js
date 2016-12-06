@@ -156,7 +156,7 @@ $(document).ready(function (e) {
                 }
                 metaVersionInfo = messages.extractMetaVersionInfo(json);
 
-                mapLayer.initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, setBlockingTopLeft, setBlockingBotRight, clearBlockingArea, urlParams.layer, urlParams.use_miles);
+                mapLayer.initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, urlParams.layer, urlParams.use_miles);
 
                 // execute query
                 initFromParams(urlParams, true);
@@ -229,17 +229,6 @@ function initFromParams(params, doQuery) {
         resolveIndex(singlePointIndex).done(function () {
             mapLayer.focus(ghRequest.route.getIndex(singlePointIndex), 15, singlePointIndex);
         });
-    }
-    if(ghRequest.getBlockingArea()){
-        var blockedAreaString = ghRequest.getBlockingArea();
-        console.log(blockedAreaString);
-        var firstArea = blockedAreaString.split(";")[0].split(",");
-        if(firstArea.length != 4){
-            console.error("Only support Rectangular Areas right now");
-        }else{
-            mapLayer.setBlockingTopLeftPoint(firstArea[0], firstArea[1]);
-            mapLayer.setBlockingBotRightPoint(firstArea[2], firstArea[3]);
-        }
     }
 }
 
@@ -372,24 +361,6 @@ function setEndCoord(e) {
     var index = ghRequest.route.size() - 1;
     ghRequest.route.set(e.latlng.wrap(), index);
     resolveTo();
-    routeIfAllResolved();
-}
-
-function setBlockingTopLeft(e){
-    mapLayer.setBlockingTopLeftPoint(e.latlng.lat, e.latlng.lng);
-    ghRequest.setBlockingArea(mapLayer.getBlockingArea());
-    routeIfAllResolved();
-}
-
-function setBlockingBotRight(e){
-    mapLayer.setBlockingBotRightPoint(e.latlng.lat, e.latlng.lng);
-    ghRequest.setBlockingArea(mapLayer.getBlockingArea());
-    routeIfAllResolved();
-}
-
-function clearBlockingArea(e){
-    mapLayer.clearBlockingArea();
-    ghRequest.setBlockingArea(mapLayer.getBlockingArea());
     routeIfAllResolved();
 }
 

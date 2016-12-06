@@ -12,12 +12,6 @@ var elevationControl = null;
 // Items added in every contextmenu.
 var defaultContextmenuItems;
 
-var blockedAreasLayer;
-var blockedMinLat;
-var blockedMinLng;
-var blockedMaxLat;
-var blockedMaxLng;
-
 // called if window changes or before map is created
 function adjustMapSize() {
     var mapDiv = $("#map");
@@ -49,7 +43,7 @@ function adjustMapSize() {
     // $("#info").css("height", height - $("#input_header").height() - 100);
 }
 
-function initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, setBlockedTopLeft, setBlockedBotRight, clearBlockedArea, selectLayer, useMiles) {
+function initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, selectLayer, useMiles) {
     adjustMapSize();
     // console.log("init map at " + JSON.stringify(bounds));
 
@@ -70,18 +64,6 @@ function initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, setBl
             map.panTo(e.latlng);
         },
         index: 12
-    }, {
-        text: translate.tr('set_top_blocked_area'),
-        callback: setBlockedTopLeft,
-        index: 13
-    }, {
-        text: translate.tr('set_bot_blocked_area'),
-        callback: setBlockedBotRight,
-        index: 14
-    }, {
-        text: translate.tr('clear_blocked_area'),
-        callback: clearBlockedArea,
-        index: 15
     }];
 
     // default
@@ -197,8 +179,6 @@ function initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, setBl
             }]),
         contextmenuInheritItems: false
     };
-
-    blockedAreasLayer = L.geoJSON().addTo(map);
 }
 
 function focus(coord, zoom, index) {
@@ -209,53 +189,6 @@ function focus(coord, zoom, index) {
         map.setView(new L.LatLng(coord.lat, coord.lng), zoom);
         mainTemplate.setFlag(coord, index);
     }
-}
-
-function setBlockingTopLeftPoint(lat, lng){
-    blockedMinLat = lat;
-    blockedMinLng = lng;
-    showBlockedArea();
-}
-
-function setBlockingBotRightPoint(lat, lng){
-    blockedMaxLat = lat;
-    blockedMaxLng = lng;
-    showBlockedArea();
-}
-
-function getBlockingArea(){
-    if(!blockedMinLat || !blockedMaxLat)
-        return "";
-    return blockedMinLat+","+blockedMinLng+","+blockedMaxLat+","+blockedMaxLng;
-}
-
-function showBlockedArea(){
-    if(!blockedMinLat || !blockedMaxLat)
-        return;
-
-    var geojsonFeature = {
-        "type": "Feature",
-        "geometry": {
-            "type": "Polygon",
-            "coordinates": [[
-                [blockedMinLng, blockedMinLat],
-                [blockedMinLng, blockedMaxLat],
-                [blockedMaxLng, blockedMaxLat],
-                [blockedMaxLng, blockedMinLat],
-                [blockedMinLng, blockedMinLat],
-            ]]
-        }
-    };
-    blockedAreasLayer.clearLayers();
-    blockedAreasLayer.addData(geojsonFeature);
-}
-
-function clearBlockingArea(){
-    blockedMinLat = null;
-    blockedMinLng = null;
-    blockedMaxLat = null;
-    blockedMaxLng = null;
-    blockedAreasLayer.clearLayers();
 }
 
 module.exports.clearLayers = function () {
@@ -303,11 +236,6 @@ module.exports.removeLayerFromMap = function (layer) {
 module.exports.focus = focus;
 module.exports.initMap = initMap;
 module.exports.adjustMapSize = adjustMapSize;
-
-module.exports.setBlockingTopLeftPoint = setBlockingTopLeftPoint;
-module.exports.setBlockingBotRightPoint = setBlockingBotRightPoint;
-module.exports.getBlockingArea = getBlockingArea;
-module.exports.clearBlockingArea = clearBlockingArea;
 
 module.exports.addElevation = function (geoJsonFeature, useMiles) {
     if (elevationControl === null) {
