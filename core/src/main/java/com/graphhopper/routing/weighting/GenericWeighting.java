@@ -21,6 +21,7 @@ import com.graphhopper.coll.GHIntHashSet;
 import com.graphhopper.routing.util.DataFlagEncoder;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.GraphEdgeIdFinder;
+import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.ConfigMap;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.Parameters.Routing;
@@ -51,7 +52,7 @@ public class GenericWeighting extends AbstractWeighting {
 
     private final GHIntHashSet blockedEdges;
     private final List<Shape> blockedShapes;
-    private Graph graph;
+    private NodeAccess na;
 
     public GenericWeighting(DataFlagEncoder encoder, ConfigMap cMap) {
         super(encoder);
@@ -103,9 +104,9 @@ public class GenericWeighting extends AbstractWeighting {
             return Double.POSITIVE_INFINITY;
         }
 
-        if(!blockedShapes.isEmpty() && graph != null){
+        if(!blockedShapes.isEmpty() && na != null){
             for (Shape shape: blockedShapes) {
-                if(shape.contains(graph.getNodeAccess().getLat(edgeState.getAdjNode()), graph.getNodeAccess().getLon(edgeState.getAdjNode()))){
+                if(shape.contains(na.getLatitude(edgeState.getAdjNode()), na.getLongitude(edgeState.getAdjNode()))){
                     return Double.POSITIVE_INFINITY;
                 }
             }
@@ -159,6 +160,6 @@ public class GenericWeighting extends AbstractWeighting {
     }
 
     public void setGraph(Graph graph) {
-        this.graph = graph;
+        this.na = graph.getNodeAccess();
     }
 }

@@ -45,7 +45,22 @@ public class GenericWeightingTest {
     private final DataFlagEncoder encoder = (DataFlagEncoder) em.getEncoder("generic");
     private Graph graph;
 
-    private final double edgeWeight = 2830;
+    private final double edgeWeight = 566;
+
+    @Before
+    public void setup() {
+        ReaderWay way = new ReaderWay(27l);
+        way.setTag("highway", "primary");
+        way.setTag("maxspeed", "10");
+
+        graph = new GraphBuilder(em).create();
+        // 0-1
+        graph.edge(0, 1, 1, true);
+        AbstractRoutingAlgorithmTester.updateDistancesFor(graph, 0, 0.00, 0.00);
+        AbstractRoutingAlgorithmTester.updateDistancesFor(graph, 1, 0.01, 0.01);
+        graph.getEdgeIteratorState(0, 1).setFlags(encoder.handleWayTags(way, 1, 0));
+
+    }
 
     @Test
     public void testBlockedById() {
@@ -69,34 +84,18 @@ public class GenericWeightingTest {
         assertEquals(edgeWeight, instance.calcWeight(edge, false, EdgeIterator.NO_EDGE), 1e-8);
 
         List<Shape> shapes = new ArrayList<>(1);
-        shapes.add(new Circle(0, 0, 1));
+        shapes.add(new Circle(0.01, 0.01, 100));
         cMap.put(BLOCKED_SHAPES, shapes);
         instance = new GenericWeighting(encoder, cMap);
         instance.setGraph(graph);
         assertEquals(Double.POSITIVE_INFINITY, instance.calcWeight(edge, false, EdgeIterator.NO_EDGE), 1e-8);
 
         shapes.clear();
-        // Do not match 1,1 of Edge - which is returned by NodeAccess
-        shapes.add(new Circle(10, 10, 1));
+        // Do not match 1,1 of edge
+        shapes.add(new Circle(0.1, 0.1, 100));
         cMap.put(BLOCKED_SHAPES, shapes);
         instance = new GenericWeighting(encoder, cMap);
         instance.setGraph(graph);
         assertEquals(edgeWeight, instance.calcWeight(edge, false, EdgeIterator.NO_EDGE), 1e-8);
-    }
-
-
-    @Before
-    public void setup() {
-        ReaderWay way = new ReaderWay(27l);
-        way.setTag("highway", "primary");
-        way.setTag("maxspeed", "10");
-
-        graph = new GraphBuilder(em).create();
-        // 0-1
-        graph.edge(0, 1, 1, true);
-        AbstractRoutingAlgorithmTester.updateDistancesFor(graph, 0, 0.00, 0.00);
-        AbstractRoutingAlgorithmTester.updateDistancesFor(graph, 1, 0.05, 0.05);
-        graph.getEdgeIteratorState(0, 1).setFlags(encoder.handleWayTags(way, 1, 0));
-
     }
 }
