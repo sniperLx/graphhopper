@@ -38,6 +38,8 @@ import java.util.Map;
 /**
  * This graph applies permanent changes passed as JsonFeature to the specified graph.
  *
+ * This class is not thread-safe. It is currently only safe to use it via GraphHopper.changeGraph
+ *
  * @author Peter Karich
  */
 public class ChangeGraphHelper {

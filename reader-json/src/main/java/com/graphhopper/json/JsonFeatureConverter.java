@@ -20,6 +20,7 @@ package com.graphhopper.json;
 import com.graphhopper.json.geo.JsonFeatureCollection;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.change.ChangeGraphHelper;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -27,20 +28,25 @@ import java.io.FilenameFilter;
 import java.io.Reader;
 
 /**
+ * Creates JsonFeature out of files and applies them to the graph.
+ * Currently not used in GraphHopper itself.
  *
  * @author Peter Karich
  */
 public class JsonFeatureConverter {
-    private final ChangeGraphHelper feedOverlayData;
+    private final ChangeGraphHelper changeGraphHelper;
     private final GHJson ghson;
     private final EncodingManager encodingManager;
 
-    public JsonFeatureConverter(GHJson ghson, ChangeGraphHelper feedOverlayData, EncodingManager encodingManager) {
+    public JsonFeatureConverter(GHJson ghson, ChangeGraphHelper changeGraphHelper, EncodingManager encodingManager) {
         this.ghson = ghson;
-        this.feedOverlayData = feedOverlayData;
+        this.changeGraphHelper = changeGraphHelper;
         this.encodingManager = encodingManager;
     }
 
+    /**
+     * Easily read GeoJSON files from disc and apply the specified changes to the graph.
+     */
     public long applyChanges(String fileOrFolderStr) {
         File fileOrFolder = new File(fileOrFolderStr);
         try {
@@ -73,6 +79,6 @@ public class JsonFeatureConverter {
     public long applyChanges(Reader reader) {
         // read full file, later support one json feature or collection per line to avoid high mem consumption
         JsonFeatureCollection data = ghson.fromJson(reader, JsonFeatureCollection.class);
-        return feedOverlayData.applyChanges(encodingManager, data.getFeatures());
+        return changeGraphHelper.applyChanges(encodingManager, data.getFeatures());
     }
 }

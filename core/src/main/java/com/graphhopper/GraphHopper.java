@@ -56,6 +56,7 @@ import java.text.DateFormat;
 import java.util.*;
 
 import static com.graphhopper.util.Parameters.Algorithms.*;
+
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -920,7 +921,7 @@ public class GraphHopper implements GraphHopperAPI {
      * @param hintsMap all parameters influencing the weighting. E.g. parameters coming via
      *                 GHRequest.getHints or directly via "&amp;api.xy=" from the URL of the web UI
      * @param encoder  the required vehicle
-     * @param graph    The Graph, prefereably the QueryGraph is passed to a Weighting if neccessary
+     * @param graph    The Graph enables the Weighting for NodeAccess and more
      * @return the weighting to be used for route calculation
      * @see HintsMap
      */
@@ -1099,8 +1100,12 @@ public class GraphHopper implements GraphHopperAPI {
         }
     }
 
+    /**
+     * This method applies the changes to the graph specified as feature collection. It does so by locking the routing
+     * to avoid concurrent changes which could result in incorrect routing (like when done while a Dijkstra search) or
+     * also while just reading one edge row (inconsistent edge properties).
+     */
     public ChangeGraphResponse changeGraph(Collection<JsonFeature> collection) {
-        // TODO make readWriteLock accessible for outside usage?
         // TODO allow calling this method if called before CH preparation
         if (getCHFactoryDecorator().isEnabled())
             throw new IllegalArgumentException("To use the changeGraph API you need to turn off CH");

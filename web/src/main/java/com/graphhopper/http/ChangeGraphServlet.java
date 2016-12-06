@@ -32,6 +32,7 @@ import org.json.JSONObject;
 import com.graphhopper.json.GHJson;
 
 /**
+ * This class defines a new endpoint to submit access and speed changes to the graph.
  *
  * @author Peter Karich
  */

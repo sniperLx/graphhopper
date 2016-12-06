@@ -26,17 +26,20 @@ import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.BreadthFirstSearch;
 import com.graphhopper.util.ConfigMap;
 import com.graphhopper.util.EdgeIteratorState;
+
 import static com.graphhopper.util.Parameters.Routing.*;
+
 import com.graphhopper.util.PointList;
 import com.graphhopper.util.shapes.BBox;
 import com.graphhopper.util.shapes.Circle;
 import com.graphhopper.util.shapes.GHPoint;
 import com.graphhopper.util.shapes.Shape;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This class allows to find edges or construct shapes from some edge and shape filter.
+ * This class allows to find edges (or construct shapes) from shape filter.
  *
  * @author Robin Boldt
  */
@@ -53,26 +56,31 @@ public class GraphEdgeIdFinder {
         this.locationIndex = locationIndex;
     }
 
+    /**
+     * This method fills the edgeIds hash with edgeIds found close (exact match) to the specified point
+     */
     public void findClosestEdgeToPoint(GHIntHashSet edgeIds, GHPoint point, EdgeFilter filter) {
         findClosestEdge(edgeIds, point.getLat(), point.getLon(), filter);
     }
 
+    /**
+     * This method fills the edgeIds hash with edgeIds found close (exact match) to the specified lat,lon
+     */
     public void findClosestEdge(GHIntHashSet edgeIds, double lat, double lon, EdgeFilter filter) {
         QueryResult qr = locationIndex.findClosest(lat, lon, filter);
         if (qr.isValid())
             edgeIds.add(qr.getClosestEdge().getEdge());
     }
 
+    /**
+     * This method fills the edgeIds hash with edgeIds found inside the specified shape
+     */
     public void findEdgesInShape(final GHIntHashSet edgeIds, final Shape shape, EdgeFilter filter) {
-        // Issue with this is approach is, if there is no street close by, it won't work as qr is not valid
-        // Maybe we should check edge points (or random points in the Shape?) if we cannot find a valid edge at the center?
         GHPoint center = shape.getCenter();
         QueryResult qr = locationIndex.findClosest(center.getLat(), center.getLon(), filter);
-
-        // We should throw an Exception here otherwise the user will not understand what is happening
-        // It might happen that a BBox center does not match the underlying street
+        // TODO: if there is no street close to the center it'll fail although there are roads covered. Maybe we should check edge points or some random points in the Shape instead?
         if (!qr.isValid())
-            return;
+            throw new IllegalArgumentException("Shape " + shape + " does not cover graph");
 
         if (shape.contains(qr.getSnappedPoint().lat, qr.getSnappedPoint().lon))
             edgeIds.add(qr.getClosestEdge().getEdge());
@@ -98,6 +106,9 @@ public class GraphEdgeIdFinder {
         bfs.start(graph.createEdgeExplorer(filter), qr.getClosestNode());
     }
 
+    /**
+     * This method fills the edgeIds hash with edgeIds found inside the specified geometry
+     */
     public void fillEdgeIDs(GHIntHashSet edgeIds, Geometry geometry, EdgeFilter filter) {
         if (geometry.isPoint()) {
             GHPoint point = geometry.asPoint();
@@ -121,10 +132,10 @@ public class GraphEdgeIdFinder {
     }
 
     /**
-     * This method reads string values from the hints and fills the cMap with objects about
-     * blocked edges and/or blocked shapes.
+     * This method reads string values from the hints about blocked areas and fills the configMap with either the
+     * created shapes or the found edges if area is small enough.
      */
-    public ConfigMap parseStringHints(ConfigMap cMap, HintsMap hints, EdgeFilter filter) {
+    public ConfigMap parseStringHints(ConfigMap configMap, HintsMap hints, EdgeFilter filter) {
         final String objectSeparator = ";";
         final String innerObjSep = ",";
         // use shapes if bigger than 1km^2
@@ -167,8 +178,8 @@ public class GraphEdgeIdFinder {
             }
         }
 
-        cMap.put(BLOCKED_EDGES, blockedEdges);
-        cMap.put(BLOCKED_SHAPES, blockedShapes);
-        return cMap;
+        configMap.put(BLOCKED_EDGES, blockedEdges);
+        configMap.put(BLOCKED_SHAPES, blockedShapes);
+        return configMap;
     }
 }

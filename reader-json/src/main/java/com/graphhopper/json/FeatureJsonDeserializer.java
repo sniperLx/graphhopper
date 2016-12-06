@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * This class makes sure reading the different geometry types.
+ * This class makes reading the different geometry types possible for Gson.
  *
  * @author Peter Karich
  */

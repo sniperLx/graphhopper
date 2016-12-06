@@ -18,6 +18,7 @@
 package com.graphhopper.storage.change;
 
 /**
+ * This class describes the changes that were applied to the graph, currently only used in GraphHopper.changeGraph
  *
  * @author Peter Karich
  */

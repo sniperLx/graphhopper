@@ -22,6 +22,8 @@ import com.graphhopper.util.shapes.BBox;
 import java.util.Map;
 
 /**
+ * This class defines a properties where a geometry is associated. Typically read from GeoJSON but also from in-memory is possible.
+ *
  * @author Peter Karich
  */
 public class JsonFeature {
@@ -37,7 +39,7 @@ public class JsonFeature {
         this.bbox = bbox;
         this.geometry = geometry;
         this.properties = properties;
-    }    
+    }
 
     public String getId() {
         return id;

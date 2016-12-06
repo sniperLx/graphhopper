@@ -22,6 +22,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 /**
+ * This class wraps the creation of the specific GHJson implementation.
+ *
  * @author Peter Karich
  */
 public class GHJsonBuilder {

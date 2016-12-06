@@ -21,6 +21,8 @@ import com.graphhopper.util.PointList;
 import com.graphhopper.util.shapes.GHPoint;
 
 /**
+ * This interface is used to define an area or location being used to block or change areas in the graph.
+ *
  * @author Peter Karich
  */
 public interface Geometry {

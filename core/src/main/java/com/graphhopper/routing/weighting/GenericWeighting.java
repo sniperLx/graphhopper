@@ -159,6 +159,9 @@ public class GenericWeighting extends AbstractWeighting {
         return "generic";
     }
 
+    /**
+     * Use this method to associate a graph with this weighting to calculate e.g. node locations too.
+     */
     public void setGraph(Graph graph) {
         this.na = graph.getNodeAccess();
     }
