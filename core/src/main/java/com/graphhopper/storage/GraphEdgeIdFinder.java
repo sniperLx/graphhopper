@@ -36,7 +36,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This class allows to find edges or construct shapes from some edge and shape filter.
+ * This class is used to search for EdgeIds in the graph that fulfill certain properties,
+ * e.g., are inside a BBox or a Circle
+ * </br>
+ * Also used to construct shapes from some edge and shape filter.
  *
  * @author Robin Boldt
  */

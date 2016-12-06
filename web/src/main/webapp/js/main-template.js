@@ -156,7 +156,7 @@ $(document).ready(function (e) {
                 }
                 metaVersionInfo = messages.extractMetaVersionInfo(json);
 
-                mapLayer.initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, urlParams.layer, urlParams.use_miles);
+                mapLayer.initMap(bounds, setStartCoord, setIntermediateCoord, setEndCoord, setBlockingTopLeft, setBlockingBotRight, clearBlockingArea, urlParams.layer, urlParams.use_miles);
 
                 // execute query
                 initFromParams(urlParams, true);
@@ -361,6 +361,24 @@ function setEndCoord(e) {
     var index = ghRequest.route.size() - 1;
     ghRequest.route.set(e.latlng.wrap(), index);
     resolveTo();
+    routeIfAllResolved();
+}
+
+function setBlockingTopLeft(e){
+    mapLayer.setBlockingTopLeftPoint(e.latlng.lat, e.latlng.lng);
+    ghRequest.api_params.block_area = mapLayer.getBlockingArea();
+    routeIfAllResolved();
+}
+
+function setBlockingBotRight(e){
+    mapLayer.setBlockingBotRightPoint(e.latlng.lat, e.latlng.lng);
+    ghRequest.api_params.block_area = mapLayer.getBlockingArea();
+    routeIfAllResolved();
+}
+
+function clearBlockingArea(e){
+    mapLayer.clearBlockingArea();
+    ghRequest.api_params.block_area = mapLayer.getBlockingArea();
     routeIfAllResolved();
 }
 
