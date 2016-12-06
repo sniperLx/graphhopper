@@ -230,6 +230,17 @@ function initFromParams(params, doQuery) {
             mapLayer.focus(ghRequest.route.getIndex(singlePointIndex), 15, singlePointIndex);
         });
     }
+    if(ghRequest.getBlockingArea()){
+        var blockedAreaString = ghRequest.getBlockingArea();
+        console.log(blockedAreaString);
+        var firstArea = blockedAreaString.split(";")[0].split(",");
+        if(firstArea.length != 4){
+            console.error("Only support Rectangular Areas right now");
+        }else{
+            mapLayer.setBlockingTopLeftPoint(firstArea[0], firstArea[1]);
+            mapLayer.setBlockingBotRightPoint(firstArea[2], firstArea[3]);
+        }
+    }
 }
 
 function resolveCoords(pointsAsStr, doQuery) {
@@ -366,19 +377,19 @@ function setEndCoord(e) {
 
 function setBlockingTopLeft(e){
     mapLayer.setBlockingTopLeftPoint(e.latlng.lat, e.latlng.lng);
-    ghRequest.api_params.block_area = mapLayer.getBlockingArea();
+    ghRequest.setBlockingArea(mapLayer.getBlockingArea());
     routeIfAllResolved();
 }
 
 function setBlockingBotRight(e){
     mapLayer.setBlockingBotRightPoint(e.latlng.lat, e.latlng.lng);
-    ghRequest.api_params.block_area = mapLayer.getBlockingArea();
+    ghRequest.setBlockingArea(mapLayer.getBlockingArea());
     routeIfAllResolved();
 }
 
 function clearBlockingArea(e){
     mapLayer.clearBlockingArea();
-    ghRequest.api_params.block_area = mapLayer.getBlockingArea();
+    ghRequest.setBlockingArea(mapLayer.getBlockingArea());
     routeIfAllResolved();
 }
 
