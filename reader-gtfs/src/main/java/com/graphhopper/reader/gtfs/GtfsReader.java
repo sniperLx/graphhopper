@@ -129,13 +129,9 @@ class GtfsReader {
             int stopEnterNode = i-1;
             nodeAccess.setAdditionalNodeField(stopEnterNode, NodeType.STOP_ENTER_NODE.ordinal());
             stopNodes.put(stop.stop_id, stopEnterNode);
-            EdgeIteratorState edge1 = graph.edge(stopEnterNode, stopEnterNode);
-            setEdgeType(edge1, GtfsStorage.EdgeType.ENTER_PT);
             nodeAccess.setNode(i++, stop.stop_lat, stop.stop_lon);
             int stopExitNode = i-1;
             nodeAccess.setAdditionalNodeField(stopExitNode, NodeType.STOP_EXIT_NODE.ordinal());
-            EdgeIteratorState edge2 = graph.edge(stopExitNode, stopExitNode);
-            setEdgeType(edge2, GtfsStorage.EdgeType.EXIT_PT);
             int time = 0;
             int prev = -1;
             NavigableSet<Fun.Tuple2<Integer, Integer>> timeNode = new TreeSet<>();
