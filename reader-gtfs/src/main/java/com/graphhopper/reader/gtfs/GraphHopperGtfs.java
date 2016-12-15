@@ -198,8 +198,6 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
             destNode = dest.getClosestNode();
         }
 
-        System.out.println(graphHopperStorage.getNodeAccess().getAdditionalNodeField(destNode));
-
         ArrayList<Integer> toNodes = new ArrayList<>();
         toNodes.add(destNode);
 

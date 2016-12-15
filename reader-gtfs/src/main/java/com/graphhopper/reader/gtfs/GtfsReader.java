@@ -52,8 +52,6 @@ class GtfsReader {
     }
 
     public void readGraph() {
-        int matchedStops = 0;
-        int unmatchedStops = 0;
         i = graph.getNodes();
         buildPtNetwork();
         LocationIndex locationIndex = new LocationIndexTree(graph, new RAMDirectory()).prepareIndex();
@@ -66,19 +64,15 @@ class GtfsReader {
                 Stop stop = feed.stops.get(entry.getKey());
                 streetNode = i;
                 nodeAccess.setNode(i++, stop.stop_lat, stop.stop_lon);
-                EdgeIteratorState loop = graph.edge(streetNode, streetNode, 0.0, false);
-                unmatchedStops++;
+                graph.edge(streetNode, streetNode, 0.0, false);
             } else {
                 streetNode = source.getClosestNode();
-                matchedStops++;
             }
             EdgeIteratorState entryEdge = graph.edge(streetNode, enterNode, 0.0, false);
             setEdgeType(entryEdge, GtfsStorage.EdgeType.ENTER_PT);
             EdgeIteratorState exitEdge = graph.edge(enterNode + 1, streetNode, 0.0, false);
             setEdgeType(exitEdge, GtfsStorage.EdgeType.EXIT_PT);
-
         }
-        System.out.printf("Matched: %d, unmatched: %d\n", matchedStops, unmatchedStops);
     }
 
     private void buildPtNetwork() {

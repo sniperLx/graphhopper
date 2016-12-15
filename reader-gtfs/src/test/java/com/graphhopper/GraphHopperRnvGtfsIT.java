@@ -9,14 +9,12 @@ import com.graphhopper.storage.GHDirectory;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.util.Helper;
-import com.graphhopper.util.Unzipper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.awt.geom.Rectangle2D;
 import java.io.File;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,19 +33,11 @@ public class GraphHopperRnvGtfsIT {
     @BeforeClass
     public static void init() {
         Helper.removeDir(new File(GRAPH_LOC));
-        String graphHopperFolder = GRAPH_LOC;
         EncodingManager encodingManager = GraphHopperGtfs.createEncodingManager();
-
         GtfsStorage gtfsStorage = GraphHopperGtfs.createGtfsStorage();
-
-        GHDirectory directory = GraphHopperGtfs.createGHDirectory(graphHopperFolder);
-        GraphHopperStorage graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, gtfsStorage, false, Collections.singleton("files/rnv.zip"),
-                Collections.singleton("files/rnv.osm.pbf")
-//                Collections.emptyList()
-
-        );
+        GHDirectory directory = GraphHopperGtfs.createGHDirectory(GRAPH_LOC);
+        GraphHopperStorage graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, gtfsStorage, false, Collections.singleton("files/rnv.zip"), Collections.singleton("files/rnv.osm.pbf"));
         LocationIndex locationIndex = GraphHopperGtfs.createOrLoadIndex(directory, graphHopperStorage);
-
         graphHopper = new GraphHopperGtfs(encodingManager, GraphHopperGtfs.createTranslationMap(), graphHopperStorage, locationIndex, gtfsStorage);
     }
 
