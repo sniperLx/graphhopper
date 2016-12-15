@@ -53,7 +53,9 @@ class GtfsReader {
 
     public void readGraph() {
         i = graph.getNodes();
+        System.out.println("Building pt");
         buildPtNetwork();
+        System.out.println("Built pt");
         LocationIndex locationIndex = new LocationIndexTree(graph, new RAMDirectory()).prepareIndex();
         EdgeFilter filter = new EverythingButPt(encoder);
         for (Map.Entry<String, Integer> entry : stopNodes.entrySet()) {

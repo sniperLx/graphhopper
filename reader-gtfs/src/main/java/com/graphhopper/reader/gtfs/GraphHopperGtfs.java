@@ -109,6 +109,7 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
                     throw new RuntimeException(e);
                 }
             }
+            System.out.println("Loading feeds");
             List<GTFSFeed> feeds = gtfsFiles.parallelStream()
                     .map(filename -> GTFSFeed.fromFile(new File(filename).getPath()))
                     .collect(Collectors.toList());
