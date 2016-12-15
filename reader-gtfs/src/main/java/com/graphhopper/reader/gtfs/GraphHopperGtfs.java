@@ -231,11 +231,11 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
             explorer = new GraphExplorer(graphHopperStorage.createEdgeExplorer(new DefaultEdgeFilter(encoder, false, true)), encoder, gtfsStorage, false);
         }
 
-        MultiCriteriaLabelSetting router;
+        SingleObjProfile router;
         if (arriveBy) {
-           router = new MultiCriteriaLabelSetting(graphHopperStorage, weighting, maxVisitedNodesForRequest, explorer, true);
+           router = new SingleObjProfile(graphHopperStorage, weighting, maxVisitedNodesForRequest, explorer, true);
         } else {
-           router = new MultiCriteriaLabelSetting(graphHopperStorage, weighting, maxVisitedNodesForRequest, explorer, false);
+           router = new SingleObjProfile(graphHopperStorage, weighting, maxVisitedNodesForRequest, explorer, false);
         }
 
         String debug = ", algoInit:" + stopWatch.stop().getSeconds() + "s";
