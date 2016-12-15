@@ -42,7 +42,7 @@ public class GraphHopperRnvGtfsIT {
 
         GHDirectory directory = GraphHopperGtfs.createGHDirectory(graphHopperFolder);
         GraphHopperStorage graphHopperStorage = GraphHopperGtfs.createOrLoad(directory, encodingManager, gtfsStorage, false, Collections.singleton("files/rnv.zip"),
-                Collections.singleton("files/rnv.osm")
+                Collections.singleton("files/rnv.osm.pbf")
 //                Collections.emptyList()
 
         );
