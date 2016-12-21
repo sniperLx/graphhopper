@@ -172,14 +172,14 @@ class SingleObjProfile {
     }
 
     private void addToFoundSolutions(Label newSolution, Set<Label> foundSolutions) {
-        for (Iterator<Label> iterator = foundSolutions.iterator(); iterator.hasNext();) {
+       /* for (Iterator<Label> iterator = foundSolutions.iterator(); iterator.hasNext();) {
             Label existingSolution = iterator.next();
             if (ParetoDominates(newSolution, existingSolution)) {
                 iterator.remove();
             } else if (ParetoDominates(existingSolution, newSolution)) {
                 return;
             }
-        }
+        }*/
         foundSolutions.add(newSolution);
     }
 
