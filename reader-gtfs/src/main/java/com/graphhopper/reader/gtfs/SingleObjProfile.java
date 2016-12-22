@@ -87,19 +87,29 @@ class SingleObjProfile {
     }
 
     Set<Label> calcPaths(int from, Set<Integer> to, long startTime, long rangeQueryEndTime) {
+        rangeQueryEndTime = Long.MAX_VALUE;
         this.rangeQueryEndTime = rangeQueryEndTime;
         Set<Label> targetLabels = new HashSet<>();
         Label label = new Label(startTime, EdgeIterator.NO_EDGE, from, 0, Long.MAX_VALUE, null);
         Set<Label> foundSolutions = new HashSet<>();
+
         fromMap.put(from, label);
         if (to.contains(from)) {
             targetLabels.add(label);
         }
         while (true) {
             visitedNodes++;
-            if (maxVisitedNodes < visitedNodes)
-                break;
-            if (foundSolutions.size() >= 3)
+            /*
+             * if (maxVisitedNodes < visitedNodes) break;
+             */
+            // often we do not get many results (e.g. 10) for a pure profile
+            // query. something wrong here. we should be able to get as many
+            // results as we want as long as the day allows.probably my
+            // understanding to the
+            // impl of the graph. so when about 10 results, the algorithm fails
+            // to find them and stops after exploring the whole graph. set
+            // maxVisited to infinity and also rangeQueryEndTime.
+            if (foundSolutions.size() >= 10)
                 break;
             for (EdgeIteratorState edge : explorer.exploreEdgesAround(label)) {
                 GtfsStorage.EdgeType edgeType = flagEncoder.getEdgeType(edge.getFlags());
@@ -111,6 +121,9 @@ class SingleObjProfile {
                         + rev * ((TimeDependentWeighting) weighting).calcTravelTimeSeconds(edge, label.currentTime);
 
                 tmpNTransfers += ((TimeDependentWeighting) weighting).calcNTransfers(edge);
+                // need to know the actual departure time. i.e if some wait
+                // happens at the source then a departure, the wait should be
+                // excluded. should be multiple departures
                 if (!reverse && edgeType == GtfsStorage.EdgeType.BOARD && tmpFirstPtDepartureTime == Long.MAX_VALUE) {
                     tmpFirstPtDepartureTime = nextTime;
                 }
@@ -122,13 +135,12 @@ class SingleObjProfile {
                 Set<Label> sptEntries = fromMap.get(edge.getAdjNode());
                 Label nEdge = new Label(nextTime, edge.getEdge(), edge.getAdjNode(), tmpNTransfers,
                         tmpFirstPtDepartureTime, label);
+                if (to.contains(edge.getAdjNode())) {
+                    addToFoundSolutions(nEdge, foundSolutions);
+                    break;
+                }
                 if (improves(nEdge, sptEntries)) {
                     removeDominated(nEdge, sptEntries);
-                    if (to.contains(edge.getAdjNode())) {
-                        removeDominated(nEdge, targetLabels);
-                        addToFoundSolutions(nEdge, foundSolutions);
-                        break;
-                    }
                     fromMap.put(edge.getAdjNode(), nEdge);
                     if (to.contains(edge.getAdjNode())) {
                         targetLabels.add(nEdge);
@@ -172,14 +184,16 @@ class SingleObjProfile {
     }
 
     private void addToFoundSolutions(Label newSolution, Set<Label> foundSolutions) {
-       /* for (Iterator<Label> iterator = foundSolutions.iterator(); iterator.hasNext();) {
-            Label existingSolution = iterator.next();
-            if (ParetoDominates(newSolution, existingSolution)) {
-                iterator.remove();
-            } else if (ParetoDominates(existingSolution, newSolution)) {
-                return;
-            }
-        }*/
+        // skipp pareto-dominance check in a try to get lager number of results
+        // at the destination
+
+        /*
+         * for (Iterator<Label> iterator = foundSolutions.iterator();
+         * iterator.hasNext();) { Label existingSolution = iterator.next(); if
+         * (ParetoDominates(newSolution, existingSolution)) { iterator.remove();
+         * } else if (ParetoDominates(existingSolution, newSolution)) { return;
+         * } }
+         */
         foundSolutions.add(newSolution);
     }
 
