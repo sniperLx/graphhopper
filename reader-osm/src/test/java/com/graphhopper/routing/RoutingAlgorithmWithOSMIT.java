@@ -25,7 +25,6 @@ import com.graphhopper.routing.util.TestAlgoCollector.AlgoHelperEntry;
 import com.graphhopper.routing.util.TestAlgoCollector.OneRun;
 import com.graphhopper.routing.weighting.ShortestWeighting;
 import com.graphhopper.routing.weighting.Weighting;
-import com.graphhopper.storage.CHGraph;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.QueryResult;
@@ -45,8 +44,6 @@ import static com.graphhopper.GraphHopperIT.DIR;
 import static com.graphhopper.util.Parameters.Algorithms.ASTAR;
 import static com.graphhopper.util.Parameters.Algorithms.DIJKSTRA_BI;
 import static org.junit.Assert.assertEquals;
-
-import org.junit.Ignore;
 
 /**
  * Try algorithms, indices and graph storages with real data
@@ -245,12 +242,12 @@ public class RoutingAlgorithmWithOSMIT {
         assertEquals(testCollector.toString(), 0, testCollector.errors.size());
 
         // see testMonaco for a similar ID test
-        assertEquals(GHUtility.asSet(2, 908, 570), GHUtility.getNeighbors(g.createEdgeExplorer().setBaseNode(10)));
-        assertEquals(GHUtility.asSet(443, 954, 739), GHUtility.getNeighbors(g.createEdgeExplorer().setBaseNode(440)));
-        assertEquals(GHUtility.asSet(910, 403, 122, 913), GHUtility.getNeighbors(g.createEdgeExplorer().setBaseNode(911)));
+        assertEquals(GHUtility.asSet(2, 909, 571), GHUtility.getNeighbors(g.createEdgeExplorer().setBaseNode(10)));
+        assertEquals(GHUtility.asSet(444, 956, 740), GHUtility.getNeighbors(g.createEdgeExplorer().setBaseNode(441)));
+        assertEquals(GHUtility.asSet(911, 404, 122, 914), GHUtility.getNeighbors(g.createEdgeExplorer().setBaseNode(912)));
 
         assertEquals(43.743705, g.getNodeAccess().getLat(100), 1e-6);
-        assertEquals(7.426362, g.getNodeAccess().getLon(701), 1e-6);
+        assertEquals(7.426362, g.getNodeAccess().getLon(702), 1e-6);
     }
 
     @Test
@@ -303,6 +300,20 @@ public class RoutingAlgorithmWithOSMIT {
         list.add(new OneRun(43.739662, 7.424355, 43.733802, 7.413433, 2452, 112));
         runAlgo(testCollector, DIR + "/monaco.osm.gz", "target/monaco-gh",
                 list, "bike2", true, "bike2", "fastest", true);
+        assertEquals(testCollector.toString(), 0, testCollector.errors.size());
+    }
+
+    @Test
+    public void testBug1014() {
+        List<OneRun> list = new ArrayList<>();
+        OneRun run = new OneRun();
+        run.add(50.016923, 11.514187, 0, 0);
+        run.add(50.019129, 11.500325, 0, 0);
+        run.add(50.023623, 11.56929, 7069, 180);
+        list.add(run);
+
+        runAlgo(testCollector, DIR + "/north-bayreuth.osm.gz", "target/north-bayreuth-gh",
+                list, "bike", true, "bike", "fastest", false);
         assertEquals(testCollector.toString(), 0, testCollector.errors.size());
     }
 
@@ -476,12 +487,12 @@ public class RoutingAlgorithmWithOSMIT {
     }
 
     /**
-     * @param testAlsoCH if true also the CH algorithms will be tested which needs preparation and
-     *                   takes a bit longer
+     * @param withCH if true also the CH and LM algorithms will be tested which need
+     *               preparation and takes a bit longer
      */
     Graph runAlgo(TestAlgoCollector testCollector, String osmFile,
                   String graphFile, List<OneRun> forEveryAlgo, String importVehicles,
-                  boolean testAlsoCH, String vehicle, String weightStr, boolean is3D) {
+                  boolean withCH, String vehicle, String weightStr, boolean is3D) {
 
         // for different weightings we need a different storage, otherwise we would need to remove the graph folder
         // everytime we come with a different weighting
@@ -493,7 +504,7 @@ public class RoutingAlgorithmWithOSMIT {
             Helper.removeDir(new File(graphFile));
             GraphHopper hopper = new GraphHopperOSM().
                     setStoreOnFlush(true).
-                    setCHEnabled(testAlsoCH).
+                    setCHEnabled(false).
                     setDataReaderFile(osmFile).
                     setGraphHopperLocation(graphFile).
                     setEncodingManager(new EncodingManager(importVehicles));
@@ -501,20 +512,26 @@ public class RoutingAlgorithmWithOSMIT {
             // avoid that path.getDistance is too different to path.getPoint.calcDistance
             hopper.setWayPointMaxDistance(0);
 
-            if (testAlsoCH)
-                hopper.getCHFactoryDecorator().addWeighting(weightStr);
+            // always enable landmarks
+            hopper.getLMFactoryDecorator().addWeighting(weightStr).
+                    setEnabled(true).setDisablingAllowed(true);
+
+            if (withCH)
+                hopper.getCHFactoryDecorator().addWeighting(weightStr).
+                        setEnabled(true).setDisablingAllowed(true);
+
             if (is3D)
                 hopper.setElevationProvider(new SRTMProvider().setCacheDir(new File(DIR)));
 
             hopper.importOrLoad();
 
             TraversalMode tMode = importVehicles.contains("turn_costs=true")
-                    ? TraversalMode.EDGE_BASED_1DIR : TraversalMode.NODE_BASED;
+                    ? TraversalMode.EDGE_BASED_2DIR : TraversalMode.NODE_BASED;
             FlagEncoder encoder = hopper.getEncodingManager().getEncoder(vehicle);
-            Weighting weighting = hopper.createWeighting(new HintsMap(weightStr), encoder, hopper.getGraphHopperStorage());
+            HintsMap hints = new HintsMap().setWeighting(weightStr).setVehicle(vehicle);
 
-            Collection<AlgoHelperEntry> prepares = RoutingAlgorithmIT.createAlgos(hopper.getGraphHopperStorage(),
-                    hopper.getLocationIndex(), testAlsoCH, tMode, weighting);
+            Collection<AlgoHelperEntry> prepares = RoutingAlgorithmIT.createAlgos(hopper, hints, tMode);
+
             EdgeFilter edgeFilter = new DefaultEdgeFilter(encoder);
             for (AlgoHelperEntry entry : prepares) {
                 algoEntry = entry;
@@ -544,7 +561,7 @@ public class RoutingAlgorithmWithOSMIT {
         String graphFile = "target/monaco-gh";
         Helper.removeDir(new File(graphFile));
         final EncodingManager encodingManager = new EncodingManager("car");
-        GraphHopper hopper = new GraphHopperOSM().
+        final GraphHopper hopper = new GraphHopperOSM().
                 setStoreOnFlush(true).
                 setEncodingManager(encodingManager).setCHEnabled(false).
                 setWayPointMaxDistance(0).
@@ -577,7 +594,7 @@ public class RoutingAlgorithmWithOSMIT {
                         public void run() {
                             OneRun oneRun = instances.get(instanceIndex);
                             AlgorithmOptions opts = AlgorithmOptions.start().weighting(weighting).algorithm(algoStr).build();
-                            testCollector.assertDistance(new AlgoHelperEntry(g, g, opts, idx),
+                            testCollector.assertDistance(new AlgoHelperEntry(g, opts, idx, algoStr + "|" + weighting),
                                     oneRun.getList(idx, filter), oneRun);
                             integ.addAndGet(1);
                         }

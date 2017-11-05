@@ -17,7 +17,6 @@
  */
 package com.graphhopper.routing;
 
-import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.SPTEntry;
@@ -31,7 +30,7 @@ import com.graphhopper.util.EdgeIterator;
  */
 public class PathBidirRef extends Path {
     protected SPTEntry edgeTo;
-    private boolean switchWrapper = false;
+    private boolean switchFromAndToSPTEntry = false;
 
     public PathBidirRef(Graph g, Weighting weighting) {
         super(g, weighting);
@@ -40,11 +39,11 @@ public class PathBidirRef extends Path {
     PathBidirRef(PathBidirRef p) {
         super(p);
         edgeTo = p.edgeTo;
-        switchWrapper = p.switchWrapper;
+        switchFromAndToSPTEntry = p.switchFromAndToSPTEntry;
     }
 
     public PathBidirRef setSwitchToFrom(boolean b) {
-        switchWrapper = b;
+        switchFromAndToSPTEntry = b;
         return this;
     }
 
@@ -65,26 +64,31 @@ public class PathBidirRef extends Path {
             throw new IllegalStateException("Locations of the 'to'- and 'from'-Edge has to be the same." + toString() + ", fromEntry:" + sptEntry + ", toEntry:" + edgeTo);
 
         extractSW.start();
-        if (switchWrapper) {
+        if (switchFromAndToSPTEntry) {
             SPTEntry ee = sptEntry;
             sptEntry = edgeTo;
             edgeTo = ee;
         }
-
-        int prevEdge = EdgeIterator.NO_EDGE;
         SPTEntry currEdge = sptEntry;
-        while (EdgeIterator.Edge.isValid(currEdge.edge)) {
-            processEdge(currEdge.edge, currEdge.adjNode, prevEdge);
-            prevEdge = currEdge.edge;
+        boolean nextEdgeValid = EdgeIterator.Edge.isValid(currEdge.edge);
+        int nextEdge;
+        while (nextEdgeValid) {
+            // the reverse search needs the next edge
+            nextEdgeValid = EdgeIterator.Edge.isValid(currEdge.parent.edge);
+            nextEdge = nextEdgeValid ? currEdge.parent.edge : EdgeIterator.NO_EDGE;
+            processEdge(currEdge.edge, currEdge.adjNode, nextEdge);
             currEdge = currEdge.parent;
         }
+
         setFromNode(currEdge.adjNode);
         reverseOrder();
         currEdge = edgeTo;
+        int prevEdge = nextEdgeValid ? sptEntry.edge : EdgeIterator.NO_EDGE;
         int tmpEdge = currEdge.edge;
         while (EdgeIterator.Edge.isValid(tmpEdge)) {
             currEdge = currEdge.parent;
-            processEdge(tmpEdge, currEdge.adjNode, currEdge.edge);
+            processEdge(tmpEdge, currEdge.adjNode, prevEdge);
+            prevEdge = tmpEdge;
             tmpEdge = currEdge.edge;
         }
         setEndNode(currEdge.adjNode);

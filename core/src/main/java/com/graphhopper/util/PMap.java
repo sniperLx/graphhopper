@@ -25,7 +25,6 @@ import java.util.Map;
  * <p>
  *
  * @author Peter Karich
- * @see ConfigMap
  */
 public class PMap {
     private final Map<String, String> map;
@@ -39,12 +38,16 @@ public class PMap {
     }
 
     public PMap(Map<String, String> map) {
-        this.map = map;
+        this.map = new HashMap<>(map);
+    }
+
+    public PMap(PMap map) {
+        this.map = new HashMap<>(map.map);
     }
 
     public PMap(String propertiesString) {
         // five chosen as arbitrary initial capacity
-        this.map = new HashMap<String, String>(5);
+        this.map = new HashMap<>(5);
 
         for (String s : propertiesString.split("\\|")) {
             s = s.trim();
@@ -146,10 +149,10 @@ public class PMap {
     }
 
     /**
-     * This method copies the underlying structur into a new Map object
+     * This method copies the underlying structure into a new Map object
      */
     public Map<String, String> toMap() {
-        return new HashMap<String, String>(map);
+        return new HashMap<>(map);
     }
 
     private Map<String, String> getMap() {

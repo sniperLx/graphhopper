@@ -42,7 +42,7 @@ public class HikeFlagEncoder extends FootFlagEncoder {
         this((int) properties.getLong("speedBits", 4),
                 properties.getDouble("speedFactor", 1));
         this.properties = properties;
-        this.setBlockFords(properties.getBool("block_fords", true));
+        this.setBlockFords(properties.getBool("block_fords", false));
     }
 
     public HikeFlagEncoder(String propertiesStr) {
@@ -62,33 +62,48 @@ public class HikeFlagEncoder extends FootFlagEncoder {
 
     @Override
     public int getVersion() {
-        return 1;
+        return 3;
     }
 
     @Override
     public long acceptWay(ReaderWay way) {
         String highwayValue = way.getTag("highway");
         if (highwayValue == null) {
+            long acceptPotentially = 0;
+
             if (way.hasTag("route", ferries)) {
                 String footTag = way.getTag("foot");
                 if (footTag == null || "yes".equals(footTag))
-                    return acceptBit | ferryBit;
+                    acceptPotentially = acceptBit | ferryBit;
             }
 
             // special case not for all acceptedRailways, only platform
             if (way.hasTag("railway", "platform"))
-                return acceptBit;
+                acceptPotentially = acceptBit;
+
+            if (way.hasTag("man_made", "pier"))
+                acceptPotentially = acceptBit;
+
+            if (acceptPotentially != 0) {
+                if (way.hasTag(restrictions, restrictedValues) && !getConditionalTagInspector().isRestrictedWayConditionallyPermitted(way))
+                    return 0;
+                return acceptPotentially;
+            }
 
             return 0;
         }
 
+        // no need to evaluate ferries or fords - already included here
+        if (way.hasTag("foot", intendedValues))
+            return acceptBit;
+
+        // check access restrictions
+        if (way.hasTag(restrictions, restrictedValues) && !getConditionalTagInspector().isRestrictedWayConditionallyPermitted(way))
+            return 0;
+
         // hiking allows all sac_scale values
         // String sacScale = way.getTag("sac_scale");
         if (way.hasTag("sidewalk", sidewalkValues))
-            return acceptBit;
-
-        // no need to evaluate ferries or fords - already included here
-        if (way.hasTag("foot", intendedValues))
             return acceptBit;
 
         if (!allowedHighwayTags.contains(highwayValue))
@@ -99,10 +114,6 @@ public class HikeFlagEncoder extends FootFlagEncoder {
 
         // do not get our feet wet, "yes" is already included above
         if (isBlockFords() && (way.hasTag("highway", "ford") || way.hasTag("ford")))
-            return 0;
-
-        // check access restrictions
-        if (way.hasTag(restrictions, restrictedValues) && !getConditionalTagInspector().isRestrictedWayConditionallyPermitted(way))
             return 0;
 
         if (getConditionalTagInspector().isPermittedWayConditionallyRestricted(way))

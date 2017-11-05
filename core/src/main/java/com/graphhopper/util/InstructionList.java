@@ -17,35 +17,60 @@
  */
 package com.graphhopper.util;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.*;
 
 /**
  * List of instructions.
  */
-public class InstructionList implements Iterable<Instruction> {
-    public static final InstructionList EMPTY = new InstructionList();
+public class InstructionList extends AbstractList<Instruction> {
+
+    static String simpleXMLEscape(String str) {
+        // We could even use the 'more flexible' CDATA section but for now do the following. The 'and' could be important sometimes:
+        return str.replaceAll("&", "&amp;").
+                // but do not care for:
+                        replaceAll("[\\<\\>]", "_");
+    }
+
     private final List<Instruction> instructions;
     private final Translation tr;
-
-    private InstructionList() {
-        this(0, null);
-    }
 
     public InstructionList(Translation tr) {
         this(10, tr);
     }
 
     public InstructionList(int cap, Translation tr) {
-        instructions = new ArrayList<Instruction>(cap);
+        instructions = new ArrayList<>(cap);
         this.tr = tr;
     }
 
-    static String simpleXMLEscape(String str) {
-        // We could even use the 'more flexible' CDATA section but for now do the following. The 'and' could be important sometimes:
-        return str.replaceAll("&", "&amp;").
-                // but do not care for:
-                replaceAll("[\\<\\>]", "_");
+    @Override
+    public int size() {
+        return instructions.size();
+    }
+
+    @Override
+    public Instruction get(int index) {
+        return instructions.get(index);
+    }
+
+    @Override
+    public Instruction set(int index, Instruction element) {
+        return instructions.set(index, element);
+    }
+
+    @Override
+    public void add(int index, Instruction element) {
+        instructions.add(index, element);
+    }
+
+    @Override
+    public Instruction remove(int index) {
+        return instructions.remove(index);
     }
 
     public void replaceLast(Instruction instr) {
@@ -55,36 +80,25 @@ public class InstructionList implements Iterable<Instruction> {
         instructions.set(instructions.size() - 1, instr);
     }
 
-    public void add(Instruction instr) {
-        instructions.add(instr);
-    }
-
-    public int getSize() {
-        return instructions.size();
-    }
-
-    public int size() {
-        return instructions.size();
-    }
-
-    public List<Map<String, Object>> createJson() {
-        List<Map<String, Object>> instrList = new ArrayList<Map<String, Object>>(instructions.size());
+    @JsonValue public List<Map<String, Object>> createJson() {
+        List<Map<String, Object>> instrList = new ArrayList<>(instructions.size());
         int pointsIndex = 0;
         int counter = 0;
         for (Instruction instruction : instructions) {
-            Map<String, Object> instrJson = new HashMap<String, Object>();
+            Map<String, Object> instrJson = new HashMap<>();
             instrList.add(instrJson);
 
             InstructionAnnotation ia = instruction.getAnnotation();
-            String str = instruction.getTurnDescription(tr);
-            if (Helper.isEmpty(str))
-                str = ia.getMessage();
-            instrJson.put("text", Helper.firstBig(str));
+            String text = instruction.getTurnDescription(tr);
+            if (Helper.isEmpty(text))
+                text = ia.getMessage();
+            instrJson.put("text", Helper.firstBig(text));
             if (!ia.isEmpty()) {
                 instrJson.put("annotation_text", ia.getMessage());
                 instrJson.put("annotation_importance", ia.getImportance());
             }
 
+            instrJson.put("street_name", instruction.getName());
             instrJson.put("time", instruction.getTime());
             instrJson.put("distance", Helper.round(instruction.getDistance(), 3));
             instrJson.put("sign", instruction.getSign());
@@ -103,24 +117,6 @@ public class InstructionList implements Iterable<Instruction> {
         return instrList;
     }
 
-    public boolean isEmpty() {
-        return instructions.isEmpty();
-    }
-
-    @Override
-    public Iterator<Instruction> iterator() {
-        return instructions.iterator();
-    }
-
-    public Instruction get(int index) {
-        return instructions.get(index);
-    }
-
-    @Override
-    public String toString() {
-        return instructions.toString();
-    }
-
     /**
      * @return This method returns a list of gpx entries where the time (in millis) is relative to
      * the first which is 0.
@@ -130,7 +126,7 @@ public class InstructionList implements Iterable<Instruction> {
         if (isEmpty())
             return Collections.emptyList();
 
-        List<GPXEntry> gpxList = new ArrayList<GPXEntry>();
+        List<GPXEntry> gpxList = new ArrayList<>();
         long timeOffset = 0;
         for (int i = 0; i < size() - 1; i++) {
             Instruction prevInstr = (i > 0) ? get(i - 1) : null;
@@ -161,14 +157,14 @@ public class InstructionList implements Iterable<Instruction> {
     }
 
     public String createGPX(String trackName, long startTimeMillis) {
-        boolean includeElevation = getSize() > 0 ? get(0).getPoints().is3D() : false;
+        boolean includeElevation = size() > 0 && get(0).getPoints().is3D();
         return createGPX(trackName, startTimeMillis, includeElevation, true, true, true);
     }
 
-    private void createWayPointBlock(StringBuilder output, Instruction instruction) {
+    private void createWayPointBlock(StringBuilder output, Instruction instruction, DecimalFormat decimalFormat) {
         output.append("\n<wpt ");
-        output.append("lat=\"").append(Helper.round6(instruction.getFirstLat()));
-        output.append("\" lon=\"").append(Helper.round6(instruction.getFirstLon())).append("\">");
+        output.append("lat=\"").append(decimalFormat.format(instruction.getFirstLat()));
+        output.append("\" lon=\"").append(decimalFormat.format(instruction.getFirstLon())).append("\">");
         String name;
         if (instruction.getName().isEmpty())
             name = instruction.getTurnDescription(tr);
@@ -181,6 +177,12 @@ public class InstructionList implements Iterable<Instruction> {
 
     public String createGPX(String trackName, long startTimeMillis, boolean includeElevation, boolean withRoute, boolean withTrack, boolean withWayPoints) {
         DateFormat formatter = Helper.createFormatter();
+
+        DecimalFormat decimalFormat = new DecimalFormat("#");
+        decimalFormat.setMinimumFractionDigits(1);
+        decimalFormat.setMaximumFractionDigits(6);
+        decimalFormat.setMinimumIntegerDigits(1);
+        decimalFormat.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.US));
 
         String header = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>"
                 + "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""
@@ -198,12 +200,12 @@ public class InstructionList implements Iterable<Instruction> {
         StringBuilder gpxOutput = new StringBuilder(header);
         if (!isEmpty()) {
             if (withWayPoints) {
-                createWayPointBlock(gpxOutput, instructions.get(0));   // Start 
+                createWayPointBlock(gpxOutput, instructions.get(0), decimalFormat);   // Start
                 for (Instruction currInstr : instructions) {
                     if ((currInstr.getSign() == Instruction.REACHED_VIA) // Via
                             || (currInstr.getSign() == Instruction.FINISH)) // End
                     {
-                        createWayPointBlock(gpxOutput, currInstr);
+                        createWayPointBlock(gpxOutput, currInstr, decimalFormat);
                     }
                 }
             }
@@ -212,11 +214,11 @@ public class InstructionList implements Iterable<Instruction> {
                 Instruction nextInstr = null;
                 for (Instruction currInstr : instructions) {
                     if (null != nextInstr)
-                        createRteptBlock(gpxOutput, nextInstr, currInstr);
+                        createRteptBlock(gpxOutput, nextInstr, currInstr, decimalFormat);
 
                     nextInstr = currInstr;
                 }
-                createRteptBlock(gpxOutput, nextInstr, null);
+                createRteptBlock(gpxOutput, nextInstr, null, decimalFormat);
                 gpxOutput.append("\n</rte>");
             }
         }
@@ -225,8 +227,8 @@ public class InstructionList implements Iterable<Instruction> {
 
             gpxOutput.append("<trkseg>");
             for (GPXEntry entry : createGPXList()) {
-                gpxOutput.append("\n<trkpt lat=\"").append(Helper.round6(entry.getLat()));
-                gpxOutput.append("\" lon=\"").append(Helper.round6(entry.getLon())).append("\">");
+                gpxOutput.append("\n<trkpt lat=\"").append(decimalFormat.format(entry.getLat()));
+                gpxOutput.append("\" lon=\"").append(decimalFormat.format(entry.getLon())).append("\">");
                 if (includeElevation)
                     gpxOutput.append("<ele>").append(Helper.round2(entry.getEle())).append("</ele>");
                 gpxOutput.append("<time>").append(formatter.format(startTimeMillis + entry.getTime())).append("</time>");
@@ -241,9 +243,9 @@ public class InstructionList implements Iterable<Instruction> {
         return gpxOutput.toString();
     }
 
-    public void createRteptBlock(StringBuilder output, Instruction instruction, Instruction nextI) {
-        output.append("\n<rtept lat=\"").append(Helper.round6(instruction.getFirstLat())).
-                append("\" lon=\"").append(Helper.round6(instruction.getFirstLon())).append("\">");
+    public void createRteptBlock(StringBuilder output, Instruction instruction, Instruction nextI, DecimalFormat decimalFormat) {
+        output.append("\n<rtept lat=\"").append(decimalFormat.format(instruction.getFirstLat())).
+                append("\" lon=\"").append(decimalFormat.format(instruction.getFirstLon())).append("\">");
 
         if (!instruction.getName().isEmpty())
             output.append("<desc>").append(simpleXMLEscape(instruction.getTurnDescription(tr))).append("</desc>");
@@ -260,6 +262,12 @@ public class InstructionList implements Iterable<Instruction> {
         if (!Double.isNaN(azimuth))
             output.append("<gh:azimuth>").append(Helper.round2(azimuth)).append("</gh:azimuth>");
 
+        if (instruction instanceof RoundaboutInstruction) {
+            RoundaboutInstruction ri = (RoundaboutInstruction) instruction;
+
+            output.append("<gh:exit_number>").append(ri.getExitNumber()).append("</gh:exit_number>");
+        }
+
         output.append("<gh:sign>").append(instruction.getSign()).append("</gh:sign>");
         output.append("</extensions>");
         output.append("</rtept>");
@@ -269,7 +277,7 @@ public class InstructionList implements Iterable<Instruction> {
      * @return list of lat lon
      */
     List<List<Double>> createStartPoints() {
-        List<List<Double>> res = new ArrayList<List<Double>>(instructions.size());
+        List<List<Double>> res = new ArrayList<>(instructions.size());
         for (Instruction instruction : instructions) {
             res.add(Arrays.asList(instruction.getFirstLat(), instruction.getFirstLon()));
         }
@@ -286,7 +294,7 @@ public class InstructionList implements Iterable<Instruction> {
      */
     public Instruction find(double lat, double lon, double maxDistance) {
         // handle special cases
-        if (getSize() == 0) {
+        if (size() == 0) {
             return null;
         }
         PointList points = get(0).getPoints();
@@ -297,8 +305,8 @@ public class InstructionList implements Iterable<Instruction> {
         int foundInstruction = 0;
 
         // Search the closest edge to the query point
-        if (getSize() > 1) {
-            for (int instructionIndex = 0; instructionIndex < getSize(); instructionIndex++) {
+        if (size() > 1) {
+            for (int instructionIndex = 0; instructionIndex < size(); instructionIndex++) {
                 points = get(instructionIndex).getPoints();
                 for (int pointIndex = 0; pointIndex < points.size(); pointIndex++) {
                     double currLat = points.getLatitude(pointIndex);
@@ -333,7 +341,7 @@ public class InstructionList implements Iterable<Instruction> {
             return null;
 
         // special case finish condition
-        if (foundInstruction == getSize())
+        if (foundInstruction == size())
             foundInstruction--;
 
         return get(foundInstruction);

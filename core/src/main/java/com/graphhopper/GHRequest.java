@@ -28,7 +28,6 @@ import java.util.Locale;
 
 /**
  * GraphHopper request wrapper to simplify requesting GraphHopper.
- * <p>
  *
  * @author Peter Karich
  * @author ratrun
@@ -40,6 +39,7 @@ public class GHRequest {
     // Headings are north based azimuth (clockwise) in (0, 360) or NaN for equal preference
     private final List<Double> favoredHeadings;
     private List<String> pointHints = new ArrayList<>();
+    private List<String> pathDetails = new ArrayList<>();
     private String algo = "";
     private boolean possibleToAdd = false;
     private Locale locale = Locale.US;
@@ -100,6 +100,7 @@ public class GHRequest {
     /**
      * Set routing request
      * <p>
+     *
      * @param points          List of stopover points in order: start, 1st stop, 2nd stop, ..., end
      * @param favoredHeadings List of favored headings for starting (start point) and arrival (via
      *                        and end points) Headings are north based azimuth (clockwise) in (0, 360) or NaN for equal
@@ -229,7 +230,7 @@ public class GHRequest {
     }
 
     /**
-     * Specifiy car, bike or foot. Or specify empty to use default.
+     * Specify car, bike or foot. Or specify empty to use default.
      */
     public GHRequest setVehicle(String vehicle) {
         hints.setVehicle(vehicle);
@@ -253,6 +254,15 @@ public class GHRequest {
         return pointHints.size() == points.size();
     }
 
+    public GHRequest setPathDetails(List<String> pathDetails) {
+        this.pathDetails = pathDetails;
+        return this;
+    }
+
+    public List<String> getPathDetails() {
+        return this.pathDetails;
+    }
+
     @Override
     public String toString() {
         String res = "";
@@ -263,6 +273,15 @@ public class GHRequest {
                 res += "; " + point.toString();
             }
         }
-        return res + "(" + algo + ")";
+        if (!algo.isEmpty())
+            res += " (" + algo + ")";
+
+        if (!pathDetails.isEmpty())
+            res += " (PathDetails: " + pathDetails + ")";
+
+        if (!hints.isEmpty())
+            res += " (Hints:" + hints + ")";
+
+        return res;
     }
 }

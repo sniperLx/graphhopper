@@ -3,8 +3,9 @@ sudo: false
 matrix:
   fast_finish: true
   include:
+    - jdk: oraclejdk8
       # Java 9 needs to be manually installed/upgraded
-      # see: https://github.com/travis-ci/travis-ci/issues/2968#issuecomment-149164058
+      # see: https://github.com/travis-ci/travis-ci/issues/2968#issuecomment-149164058      
     - jdk: oraclejdk9
       env: JVM=latest
       sudo: required
@@ -38,14 +39,14 @@ before_install:
          sudo apt-get -o Dpkg::Options::="--force-confnew" install -y oracle-java9-installer oracle-java9-set-default oracle-java9-unlimited-jce-policy;
          sudo update-java-alternatives -s java-9-oracle;
      fi
-   - if [ "$TRAVIS_JDK_VERSION" == oraclejdk9 ]; then
-         sudo rm /etc/mavenrc;
-     fi
+#   - if [ "$TRAVIS_JDK_VERSION" == oraclejdk9 ]; then
+#         sudo rm /etc/mavenrc;
+#     fi
 
 install: true
 
 script:
-  - mvn -DfailIfNoTests=false clean test verify -B
+  - mvn clean test verify checkstyle:check findbugs:check -B
 
 after_success:
   # deploy snapshot artifacts to maven central
@@ -58,7 +59,7 @@ after_success:
 
 notifications:
   email:
-    - github@graphhopper.com
+    - secure: l7/fjqL0c/9UcULXdhaKxsroZMg07nfNDiOHRBf7YKf8wrKdH52Z5kP7E10+a8iD/ieLD+ZaZPlom1bE7HymE1bVkp3d17Ezha47W5sdyOOb3NBDpg8olS4TkehOKo3AQhLXSfF6QGtipxY8Iy9QknXHngQOrcoGYiOlzCZ3BTQ=
 
 cache:
   directories:

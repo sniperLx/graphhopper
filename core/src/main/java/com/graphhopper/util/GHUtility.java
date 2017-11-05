@@ -262,15 +262,12 @@ public class GHUtility {
     }
 
     static Directory guessDirectory(GraphStorage store) {
-        String location = store.getDirectory().getLocation();
-        Directory outdir;
         if (store.getDirectory() instanceof MMapDirectory) {
             throw new IllegalStateException("not supported yet: mmap will overwrite existing storage at the same location");
-        } else {
-            boolean isStoring = ((GHDirectory) store.getDirectory()).isStoring();
-            outdir = new RAMDirectory(location, isStoring);
         }
-        return outdir;
+        String location = store.getDirectory().getLocation();
+        boolean isStoring = ((GHDirectory) store.getDirectory()).isStoring();
+        return new RAMDirectory(location, isStoring);
     }
 
     /**
@@ -359,7 +356,7 @@ public class GHUtility {
     public static int getEdgeFromEdgeKey(int edgeKey) {
         return edgeKey / 2;
     }
-    
+
     /**
      * This edge iterator can be used in tests to mock specific iterator behaviour via overloading
      * certain methods.
@@ -491,7 +488,7 @@ public class GHUtility {
         }
 
         @Override
-        public boolean canBeOverwritten(long flags) {
+        public int getMergeStatus(long flags) {
             throw new UnsupportedOperationException("Not supported. Edge is empty.");
         }
     }

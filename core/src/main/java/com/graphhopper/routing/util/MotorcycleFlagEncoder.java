@@ -121,7 +121,7 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder {
 
     @Override
     public int getVersion() {
-        return 1;
+        return 2;
     }
 
     /**
@@ -147,13 +147,14 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder {
     @Override
     public long acceptWay(ReaderWay way) {
         String highwayValue = way.getTag("highway");
+        String firstValue = way.getFirstPriorityTag(restrictions);
         if (highwayValue == null) {
             if (way.hasTag("route", ferries)) {
-                String motorcycleTag = way.getTag("motorcycle");
-                if (motorcycleTag == null)
-                    motorcycleTag = way.getTag("motor_vehicle");
-
-                if (motorcycleTag == null && !way.hasTag("foot") && !way.hasTag("bicycle") || "yes".equals(motorcycleTag))
+                if (restrictedValues.contains(firstValue))
+                    return 0;
+                if (intendedValues.contains(firstValue) ||
+                        // implied default is allowed only if foot and bicycle is not specified:
+                        firstValue.isEmpty() && !way.hasTag("foot") && !way.hasTag("bicycle"))
                     return acceptBit | ferryBit;
             }
             return 0;
@@ -171,7 +172,6 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder {
         if (way.hasTag("impassable", "yes") || way.hasTag("status", "impassable"))
             return 0;
 
-        String firstValue = way.getFirstPriorityTag(restrictions);
         if (!firstValue.isEmpty()) {
             if (restrictedValues.contains(firstValue) && !getConditionalTagInspector().isRestrictedWayConditionallyPermitted(way))
                 return 0;
@@ -208,7 +208,7 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder {
             if (speed > 30 && way.hasTag("surface", badSurfaceSpeedMap))
                 speed = 30;
 
-            boolean isRoundabout = way.hasTag("junction", "roundabout");
+            boolean isRoundabout = way.hasTag("junction", "roundabout") || way.hasTag("junction", "circular");
             if (isRoundabout)
                 flags = setBool(0, K_ROUNDABOUT, true);
 
@@ -227,7 +227,7 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder {
             }
 
         } else {
-            double ferrySpeed = getFerrySpeed(way, defaultSpeedMap.get("living_street"), defaultSpeedMap.get("service"), defaultSpeedMap.get("residential"));
+            double ferrySpeed = getFerrySpeed(way);
             flags = setSpeed(flags, ferrySpeed);
             flags = setReverseSpeed(flags, ferrySpeed);
             flags |= directionBitMask;

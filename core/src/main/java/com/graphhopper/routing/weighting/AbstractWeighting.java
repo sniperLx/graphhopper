@@ -27,7 +27,7 @@ import com.graphhopper.util.EdgeIteratorState;
 public abstract class AbstractWeighting implements Weighting {
     protected final FlagEncoder flagEncoder;
 
-    public AbstractWeighting(FlagEncoder encoder) {
+    protected AbstractWeighting(FlagEncoder encoder) {
         this.flagEncoder = encoder;
         if (!flagEncoder.isRegistered())
             throw new IllegalStateException("Make sure you add the FlagEncoder " + flagEncoder + " to an EncodingManager before using it elsewhere");
@@ -47,7 +47,7 @@ public abstract class AbstractWeighting implements Weighting {
         if (Double.isInfinite(speed) || Double.isNaN(speed) || speed < 0)
             throw new IllegalStateException("Invalid speed stored in edge! " + speed);
         if (speed == 0)
-            throw new IllegalStateException("Speed cannot be 0 for unblocked edge, use access properties to mark edge blocked! Should only occur for shortest path calculation. See #242.");        
+            throw new IllegalStateException("Speed cannot be 0 for unblocked edge, use access properties to mark edge blocked! Should only occur for shortest path calculation. See #242.");
 
         return (long) (edgeState.getDistance() * 3600 / speed);
     }

@@ -57,7 +57,7 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
                 properties.getBool("turn_costs", false) ? 1 : 0);
         this.properties = properties;
         this.setBlockFords(properties.getBool("block_fords", true));
-        this.setBlockByDefault(properties.getBool("block_barriers", true));        
+        this.setBlockByDefault(properties.getBool("block_barriers", true));
     }
 
     public CarFlagEncoder(String propertiesStr) {
@@ -163,6 +163,10 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
 
     protected double getSpeed(ReaderWay way) {
         String highwayValue = way.getTag("highway");
+        if (!Helper.isEmpty(highwayValue) && way.hasTag("motorroad", "yes")
+                && highwayValue != "motorway" && highwayValue != "motorway_link") {
+            highwayValue = "motorroad";
+        }
         Integer speed = defaultSpeedMap.get(highwayValue);
         if (speed == null)
             throw new IllegalStateException(toString() + ", no speed found for: " + highwayValue + ", tags: " + way);
@@ -183,13 +187,14 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
     public long acceptWay(ReaderWay way) {
         // TODO: Ferries have conditionals, like opening hours or are closed during some time in the year
         String highwayValue = way.getTag("highway");
+        String firstValue = way.getFirstPriorityTag(restrictions);
         if (highwayValue == null) {
             if (way.hasTag("route", ferries)) {
-                String motorcarTag = way.getTag("motorcar");
-                if (motorcarTag == null)
-                    motorcarTag = way.getTag("motor_vehicle");
-
-                if (motorcarTag == null && !way.hasTag("foot") && !way.hasTag("bicycle") || "yes".equals(motorcarTag))
+                if (restrictedValues.contains(firstValue))
+                    return 0;
+                if (intendedValues.contains(firstValue) ||
+                        // implied default is allowed only if foot and bicycle is not specified:
+                        firstValue.isEmpty() && !way.hasTag("foot") && !way.hasTag("bicycle"))
                     return acceptBit | ferryBit;
             }
             return 0;
@@ -208,7 +213,6 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
             return 0;
 
         // multiple restrictions needs special handling compared to foot and bike, see also motorcycle
-        String firstValue = way.getFirstPriorityTag(restrictions);
         if (!firstValue.isEmpty()) {
             if (restrictedValues.contains(firstValue) && !getConditionalTagInspector().isRestrictedWayConditionallyPermitted(way))
                 return 0;
@@ -246,7 +250,7 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
 
             flags = setSpeed(flags, speed);
 
-            boolean isRoundabout = way.hasTag("junction", "roundabout");
+            boolean isRoundabout = way.hasTag("junction", "roundabout") || way.hasTag("junction", "circular");
             if (isRoundabout)
                 flags = setBool(flags, K_ROUNDABOUT, true);
 
@@ -260,15 +264,15 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
                 flags |= directionBitMask;
 
         } else {
-            double ferrySpeed = getFerrySpeed(way, defaultSpeedMap.get("living_street"), defaultSpeedMap.get("service"), defaultSpeedMap.get("residential"));
+            double ferrySpeed = getFerrySpeed(way);
             flags = setSpeed(flags, ferrySpeed);
             flags |= directionBitMask;
         }
 
-        for (String restriction: restrictions) {
-            if(way.hasTag(restriction, "destination")){
+        for (String restriction : restrictions) {
+            if (way.hasTag(restriction, "destination")) {
                 // This is problematic as Speed != Time
-                flags = this.speedEncoder.setDoubleValue(flags, destinationSpeed);
+                flags = setSpeed(flags, destinationSpeed);
             }
         }
 
@@ -329,6 +333,7 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
         else
             return "destination: " + str;
     }
+
     /**
      * @param way:   needed to retrieve tags
      * @param speed: speed guessed e.g. from the road type or other tags

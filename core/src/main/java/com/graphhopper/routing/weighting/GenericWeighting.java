@@ -17,61 +17,53 @@
  */
 package com.graphhopper.routing.weighting;
 
-import com.graphhopper.coll.GHIntHashSet;
 import com.graphhopper.routing.util.DataFlagEncoder;
-import com.graphhopper.storage.Graph;
-import com.graphhopper.storage.GraphEdgeIdFinder;
-import com.graphhopper.storage.NodeAccess;
-import com.graphhopper.util.ConfigMap;
 import com.graphhopper.util.EdgeIteratorState;
+import com.graphhopper.util.PMap;
 import com.graphhopper.util.Parameters.Routing;
-import com.graphhopper.util.shapes.Shape;
-
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Calculates the best route according to a configurable weighting.
- * <p>
  *
  * @author Peter Karich
  */
 public class GenericWeighting extends AbstractWeighting {
+
+    public static final String HEIGHT_LIMIT = "height";
+    public static final String WEIGHT_LIMIT = "weight";
+    public static final String WIDTH_LIMIT = "width";
     /**
      * Convert to milliseconds for correct calcMillis.
      */
-    private final static double SPEED_CONV = 3600;
-    private final double headingPenalty;
-    private final long headingPenaltyMillis;
-    private final double maxSpeed;
-    private final DataFlagEncoder gEncoder;
-    private final double[] speedArray;
-    private final int accessType;
-    private final int eventuallAccessiblePenalty = 10;
+    protected final static double SPEED_CONV = 3600;
+    protected final double headingPenalty;
+    protected final long headingPenaltyMillis;
+    protected final double maxSpeed;
+    protected final DataFlagEncoder gEncoder;
+    protected final DataFlagEncoder.WeightingConfig weightingConfig;
+    protected final int accessType;
+    protected final int uncertainAccessiblePenalty = 10;
 
-    private final GHIntHashSet blockedEdges;
-    private final List<Shape> blockedShapes;
-    private NodeAccess na;
+    protected final double height;
+    protected final double weight;
+    protected final double width;
 
-    public GenericWeighting(DataFlagEncoder encoder, ConfigMap cMap) {
+    public GenericWeighting(DataFlagEncoder encoder, PMap hintsMap) {
         super(encoder);
         gEncoder = encoder;
-        headingPenalty = cMap.getDouble(Routing.HEADING_PENALTY, Routing.DEFAULT_HEADING_PENALTY);
+        headingPenalty = hintsMap.getDouble(Routing.HEADING_PENALTY, Routing.DEFAULT_HEADING_PENALTY);
         headingPenaltyMillis = Math.round(headingPenalty * 1000);
 
-        speedArray = gEncoder.getHighwaySpeedMap(cMap.getMap("highways", Double.class));
-        double tmpSpeed = 0;
-        for (double speed : speedArray) {
-            if (speed > tmpSpeed)
-                tmpSpeed = speed;
-        }
-        if (tmpSpeed > encoder.getMaxPossibleSpeed())
-            throw new IllegalArgumentException("Speed bigger than maximum speed: " + tmpSpeed + " > " + encoder.getMaxPossibleSpeed());
+        weightingConfig = encoder.createWeightingConfig(hintsMap);
+        double maxSpecifiedSpeed = weightingConfig.getMaxSpecifiedSpeed();
+        if (maxSpecifiedSpeed > encoder.getMaxPossibleSpeed())
+            throw new IllegalArgumentException("Some specified speed value bigger than maximum possible speed: " + maxSpecifiedSpeed + " > " + encoder.getMaxPossibleSpeed());
 
-        maxSpeed = tmpSpeed / SPEED_CONV;
+        this.maxSpeed = maxSpecifiedSpeed / SPEED_CONV;
         accessType = gEncoder.getAccessType("motor_vehicle");
-        blockedEdges = cMap.get(GraphEdgeIdFinder.BLOCKED_EDGES, new GHIntHashSet(0));
-        blockedShapes = cMap.get(GraphEdgeIdFinder.BLOCKED_SHAPES, Collections.EMPTY_LIST);
+        height = hintsMap.getDouble(HEIGHT_LIMIT, 0d);
+        weight = hintsMap.getDouble(WEIGHT_LIMIT, 0d);
+        width = hintsMap.getDouble(WIDTH_LIMIT, 0d);
     }
 
     @Override
@@ -85,33 +77,31 @@ public class GenericWeighting extends AbstractWeighting {
         if (reverse) {
             if (!gEncoder.isBackward(edgeState, accessType))
                 return Double.POSITIVE_INFINITY;
-        } else if (!gEncoder.isForward(edgeState, accessType))
+        } else if (!gEncoder.isForward(edgeState, accessType)) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        if (gEncoder.isStoreHeight() && overLimit(height, gEncoder.getHeight(edgeState))
+                || gEncoder.isStoreWeight() && overLimit(weight, gEncoder.getWeight(edgeState))
+                || gEncoder.isStoreWidth() && overLimit(width, gEncoder.getWidth(edgeState)))
             return Double.POSITIVE_INFINITY;
 
         long time = calcMillis(edgeState, reverse, prevOrNextEdgeId);
         if (time == Long.MAX_VALUE)
             return Double.POSITIVE_INFINITY;
 
-        switch (gEncoder.getEdgeAccessValue(edgeState.getFlags())){
+        switch (gEncoder.getAccessValue(edgeState.getFlags())) {
             case NOT_ACCESSIBLE:
                 return Double.POSITIVE_INFINITY;
             case EVENTUALLY_ACCESSIBLE:
-                time = time * eventuallAccessiblePenalty;
-        }
-
-        if(!blockedEdges.isEmpty() && blockedEdges.contains(edgeState.getEdge())){
-            return Double.POSITIVE_INFINITY;
-        }
-
-        if(!blockedShapes.isEmpty() && na != null){
-            for (Shape shape: blockedShapes) {
-                if(shape.contains(na.getLatitude(edgeState.getAdjNode()), na.getLongitude(edgeState.getAdjNode()))){
-                    return Double.POSITIVE_INFINITY;
-                }
-            }
+                time = time * uncertainAccessiblePenalty;
         }
 
         return time;
+    }
+
+    private boolean overLimit(double value, double valueMax) {
+        return value > 0 && valueMax > 0 && value >= valueMax;
     }
 
     @Override
@@ -119,11 +109,7 @@ public class GenericWeighting extends AbstractWeighting {
         // TODO to avoid expensive reverse flags include oneway accessibility
         // but how to include e.g. maxspeed as it depends on direction? Does highway depend on direction?
         // reverse = edge.isReverse()? !reverse : reverse;
-        int highwayVal = gEncoder.getHighway(edgeState);
-        double speed = speedArray[highwayVal];
-        if (speed < 0)
-            throw new IllegalStateException("speed was negative? " + edgeState.getEdge()
-                    + ", highway:" + highwayVal + ", reverse:" + reverse);
+        double speed = weightingConfig.getSpeed(edgeState);
         if (speed == 0)
             return Long.MAX_VALUE;
 
@@ -156,14 +142,5 @@ public class GenericWeighting extends AbstractWeighting {
     @Override
     public String getName() {
         return "generic";
-    }
-
-    /**
-     * Use this method to associate a graph with this weighting to calculate e.g. node locations too.
-     */
-    public void setGraph(Graph graph) {
-        if(graph == null)
-            return;
-        this.na = graph.getNodeAccess();
     }
 }

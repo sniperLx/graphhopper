@@ -120,6 +120,19 @@ public class GraphicsWrapper {
     }
 
     public void plotNode(Graphics2D g2, int loc, Color c) {
+        plotNode(g2, loc, c, 4);
+    }
+
+
+    public void plotNode(Graphics2D g2, int loc, Color c, int size) {
+        plotNode(g2, loc, c, size, "");
+    }
+
+    public void plotNode(Graphics2D g2, int loc, Color c, int size, String text) {
+        plotNode(g2, na, loc, c, size, "");
+    }
+
+    public void plotNode(Graphics2D g2, NodeAccess na, int loc, Color c, int size, String text) {
         double lat = na.getLatitude(loc);
         double lon = na.getLongitude(loc);
         if (lat < bounds.minLat || lat > bounds.maxLat || lon < bounds.minLon || lon > bounds.maxLon) {
@@ -128,7 +141,7 @@ public class GraphicsWrapper {
 
         Color old = g2.getColor();
         g2.setColor(c);
-        plot(g2, lat, lon, 4);
+        plot(g2, lat, lon, size);
         g2.setColor(old);
     }
 
@@ -138,7 +151,7 @@ public class GraphicsWrapper {
         g2.fillOval((int) x, (int) y, width, width);
     }
 
-    void scale(int x, int y, boolean zoomIn) {
+    public void scale(int x, int y, boolean zoomIn) {
         double tmpFactor = 0.5f;
         if (!zoomIn) {
             tmpFactor = 2;

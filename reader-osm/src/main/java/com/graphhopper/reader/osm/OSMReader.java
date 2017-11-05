@@ -51,21 +51,21 @@ import static com.graphhopper.util.Helper.nf;
  * This class parses an OSM xml or pbf file and creates a graph from it. It does so in a two phase
  * parsing processes in order to reduce memory usage compared to a single parsing processing.
  * <p>
- * 1. a) Reads ways from OSM file and stores all associated node ids in osmNodeIdToIndexMap. If a
+ * 1. a) Reads ways from OSM file and stores all associated node ids in {@link #osmNodeIdToInternalNodeMap}. If a
  * node occurs once it is a pillar node and if more it is a tower node, otherwise
- * osmNodeIdToIndexMap returns EMPTY.
+ * {@link #osmNodeIdToInternalNodeMap} returns EMPTY.
  * <p>
  * 1. b) Reads relations from OSM file. In case that the relation is a route relation, it stores
- * specific relation attributes required for routing into osmWayIdToRouteWeigthMap for all the ways
+ * specific relation attributes required for routing into {@link #osmWayIdToRouteWeightMap} for all the ways
  * of the relation.
  * <p>
  * 2.a) Reads nodes from OSM file and stores lat+lon information either into the intermediate
- * datastructure for the pillar nodes (pillarLats/pillarLons) or, if a tower node, directly into the
+ * data structure for the pillar nodes (pillarLats/pillarLons) or, if a tower node, directly into the
  * graphStorage via setLatitude/setLongitude. It can also happen that a pillar node needs to be
  * transformed into a tower node e.g. via barriers or different speed values for one way.
  * <p>
- * 2.b) Reads ways OSM file and creates edges while calculating the speed etc from the OSM tags.
- * When creating an edge the pillar node information from the intermediate datastructure will be
+ * 2.b) Reads ways from OSM file and creates edges while calculating the speed etc from the OSM tags.
+ * When creating an edge the pillar node information from the intermediate data structure will be
  * stored in the way geometry of that edge.
  * <p>
  *
@@ -92,7 +92,7 @@ public class OSMReader implements DataReader {
     protected PillarInfo pillarInfo;
     private long locations;
     private long skippedLocations;
-    private EncodingManager encodingManager = null;
+    private final EncodingManager encodingManager;
     private int workerThreads = 2;
     // Using the correct Map<Long, Integer> is hard. We need a memory efficient and fast solution for big data sets!
     //
@@ -117,11 +117,13 @@ public class OSMReader implements DataReader {
     private ElevationProvider eleProvider = ElevationProvider.NOOP;
     private File osmFile;
     private Date osmDataDate;
+    private boolean dontCreateStorage = false;
 
     public OSMReader(GraphHopperStorage ghStorage) {
         this.ghStorage = ghStorage;
         this.graph = ghStorage;
         this.nodeAccess = graph.getNodeAccess();
+        this.encodingManager = ghStorage.getEncodingManager();
 
         osmNodeIdToInternalNodeMap = new GHLongIntBTree(200);
         osmNodeIdToNodeFlagsMap = new GHLongLongHashMap(200, .5f);
@@ -158,10 +160,7 @@ public class OSMReader implements DataReader {
      * compact graph data structure.
      */
     void preProcess(File osmFile) {
-        OSMInputFile in = null;
-        try {
-            in = new OSMInputFile(osmFile).setWorkerThreads(workerThreads).open();
-
+        try (OSMInput in = openOsmInputFile(osmFile)) {
             long tmpWayCounter = 1;
             long tmpRelationCounter = 1;
             ReaderElement item;
@@ -201,8 +200,6 @@ public class OSMReader implements DataReader {
             }
         } catch (Exception ex) {
             throw new RuntimeException("Problem while parsing file", ex);
-        } finally {
-            Helper.close(in);
         }
     }
 
@@ -253,20 +250,20 @@ public class OSMReader implements DataReader {
     private void writeOsm2Graph(File osmFile) {
         int tmp = (int) Math.max(getNodeMap().getSize() / 50, 100);
         LOGGER.info("creating graph. Found nodes (pillar+tower):" + nf(getNodeMap().getSize()) + ", " + Helper.getMemInfo());
-        ghStorage.create(tmp);
+        if (!dontCreateStorage) {
+            ghStorage.create(tmp);
+        }
         long wayStart = -1;
         long relationStart = -1;
         long counter = 1;
-        OSMInputFile in = null;
-        try {
-            in = new OSMInputFile(osmFile).setWorkerThreads(workerThreads).open();
+        try (OSMInput in = openOsmInputFile(osmFile)) {
             LongIntMap nodeFilter = getNodeMap();
 
             ReaderElement item;
             while ((item = in.getNext()) != null) {
                 switch (item.getType()) {
                     case ReaderElement.NODE:
-                        if (nodeFilter.get(item.getId()) != -1) {
+                        if (nodeFilter.get(item.getId()) != EMPTY_NODE) {
                             processNode((ReaderNode) item);
                         }
                         break;
@@ -301,13 +298,15 @@ public class OSMReader implements DataReader {
             // logger.info("storage nodes:" + storage.nodes() + " vs. graph nodes:" + storage.getGraph().nodes());
         } catch (Exception ex) {
             throw new RuntimeException("Couldn't process file " + osmFile + ", error: " + ex.getMessage(), ex);
-        } finally {
-            Helper.close(in);
         }
 
         finishedReading();
         if (graph.getNodes() == 0)
             throw new RuntimeException("Graph after reading OSM must not be empty. Read " + counter + " items and " + locations + " locations");
+    }
+
+    protected OSMInput openOsmInputFile(File osmFile) throws XMLStreamException, IOException {
+        return new OSMInputFile(osmFile).setWorkerThreads(workerThreads).open();
     }
 
     /**
@@ -876,15 +875,6 @@ public class OSMReader implements DataReader {
         return osmWayIdToRouteWeightMap;
     }
 
-    /**
-     * Specify the type of the path calculation (car, bike, ...).
-     */
-    @Override
-    public OSMReader setEncodingManager(EncodingManager em) {
-        this.encodingManager = em;
-        return this;
-    }
-
     @Override
     public OSMReader setWayPointMaxDistance(double maxDist) {
         doSimplify = maxDist > 0;
@@ -927,6 +917,10 @@ public class OSMReader implements DataReader {
     @Override
     public Date getDataDate() {
         return osmDataDate;
+    }
+
+    public void setDontCreateStorage(boolean dontCreateStorage) {
+        this.dontCreateStorage = dontCreateStorage;
     }
 
     @Override

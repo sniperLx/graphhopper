@@ -40,11 +40,11 @@ public class Downloader {
     public static void main(String[] args) throws IOException {
         new Downloader("GraphHopper Downloader").downloadAndUnzip("http://graphhopper.com/public/maps/0.1/europe_germany_berlin.ghz", "somefolder",
                 new ProgressListener() {
-            @Override
-            public void update(long val) {
-                System.out.println("progress:" + val);
-            }
-        });
+                    @Override
+                    public void update(long val) {
+                        System.out.println("progress:" + val);
+                    }
+                });
     }
 
     public Downloader setTimeout(int timeout) {
@@ -122,6 +122,7 @@ public class Downloader {
                 writer.write(buffer, 0, numRead);
             }
         } finally {
+            Helper.close(iStream);
             Helper.close(writer);
             Helper.close(in);
         }

@@ -1,7 +1,10 @@
 global.d3 = require('d3');
+var Flatpickr = require('flatpickr');
+
 var L = require('leaflet');
 require('leaflet-contextmenu');
 require('leaflet-loading');
+var moment = require('moment');
 require('./lib/leaflet.elevation-0.0.4.min.js');
 require('./lib/leaflet_numbered_markers.js');
 
@@ -40,7 +43,7 @@ var translate = require('./translate.js');
 
 var format = require('./tools/format.js');
 var urlTools = require('./tools/url.js');
-var vehicle = require('./tools/vehicle.js');
+var vehicleTools = require('./tools/vehicle.js');
 var tileLayers = require('./config/tileLayers.js');
 
 var debug = false;
@@ -130,9 +133,12 @@ $(document).ready(function (e) {
                     // car, foot and bike should come first. mc comes last
                     var prefer = {"car": 1, "foot": 2, "bike": 3, "motorcycle": 10000};
                     var showAllVehicles = urlParams.vehicle && (!prefer[urlParams.vehicle] || prefer[urlParams.vehicle] > 3);
-                    var vehicles = vehicle.getSortedVehicleKeys(json.features, prefer);
+                    var vehicles = vehicleTools.getSortedVehicleKeys(json.features, prefer);
                     if (vehicles.length > 0)
                         ghRequest.initVehicle(vehicles[0]);
+
+                    if (!ghRequest.isPublicTransit())
+                        $(".time_input").hide();
 
                     var hiddenVehicles = [];
                     for (var i in vehicles) {
@@ -211,6 +217,19 @@ $(document).ready(function (e) {
 
 function initFromParams(params, doQuery) {
     ghRequest.init(params);
+
+    var flatpickr = new Flatpickr(document.getElementById("input_date_0"), {
+        defaultDate: new Date(),
+        allowInput: true, /* somehow then does not sync!? */
+        minuteIncrement: 15,
+        time_24hr: true,
+        enableTime: true
+    });
+
+    if (ghRequest.getEarliestDepartureTime()) {
+        flatpickr.setDate(ghRequest.getEarliestDepartureTime());
+    }
+
     var count = 0;
     var singlePointIndex;
     if (params.point)
@@ -278,6 +297,7 @@ function checkInput() {
         var index = $(this).parent().data('index');
         ghRequest.route.removeSingle(index);
         mapLayer.clearLayers();
+        checkInput();
         routeLatLng(ghRequest, false);
     };
 
@@ -336,10 +356,10 @@ function setStartCoord(e) {
 
 function setIntermediateCoord(e) {
     var routeLayers = mapLayer.getSubLayers("route");
-    var routeSegments = routeLayers.map(function(rl) {
+    var routeSegments = routeLayers.map(function (rl) {
         return {
             coordinates: rl.getLatLngs(),
-            wayPoints: rl.feature.properties.snapped_waypoints.coordinates.map(function(wp) {
+            wayPoints: rl.feature.properties.snapped_waypoints.coordinates.map(function (wp) {
                 return L.latLng(wp[1], wp[0]);
             })
         };
@@ -442,6 +462,11 @@ function resolveAll() {
     for (var i = 0, l = ghRequest.route.size(); i < l; i++) {
         ret[i] = resolveIndex(i);
     }
+
+    if(ghRequest.isPublicTransit())
+        ghRequest.setEarliestDepartureTime(
+            moment($("#input_date_0").val(), 'YYYY-MM-DD HH:mm').toISOString());
+
     return ret;
 }
 
@@ -555,6 +580,14 @@ function routeLatLng(request, doQuery) {
             };
         };
 
+        if(json.paths.length > 0 && json.paths[0].points_order) {
+            mapLayer.clearLayers();
+            var po = json.paths[0].points_order;
+            for (var i = 0; i < po.length; i++) {
+                setFlag(ghRequest.route.getIndex(po[i]), i);
+            }
+        }
+
         for (var pathIndex = 0; pathIndex < json.paths.length; pathIndex++) {
             var tabHeader = $("<li>").append((pathIndex + 1) + "<img class='alt_route_img' src='img/alt_route.png'/>");
             if (pathIndex === 0)
@@ -580,14 +613,28 @@ function routeLatLng(request, doQuery) {
             routeResultsDiv.append(oneTab);
             tabHeader.click(createClickHandler(geoJsons, pathIndex, tabHeader, oneTab, request.hasElevation(), request.useMiles));
 
-            var tmpTime = translate.createTimeString(path.time);
-            var tmpDist = translate.createDistanceString(path.distance, request.useMiles);
             var routeInfo = $("<div class='route_description'>");
             if (path.description && path.description.length > 0) {
                 routeInfo.text(path.description);
                 routeInfo.append("<br/>");
             }
-            routeInfo.append(translate.tr("route_info", [tmpDist, tmpTime]));
+
+            var tempDistance = translate.createDistanceString(path.distance, request.useMiles);
+            var tempRouteInfo;
+            if(request.isPublicTransit()) {
+                var tempArrTime = moment(ghRequest.getEarliestDepartureTime())
+                                        .add(path.time, 'milliseconds')
+                                        .format('LT');
+                if(path.transfers >= 0)
+                    tempRouteInfo = translate.tr("pt_route_info", [tempArrTime, path.transfers, tempDistance]);
+                else
+                    tempRouteInfo = translate.tr("pt_route_info_walking", [tempArrTime, tempDistance]);
+            } else {
+                var tmpDuration = translate.createTimeString(path.time);
+                tempRouteInfo = translate.tr("route_info", [tempDistance, tmpDuration]);
+            }
+
+            routeInfo.append(tempRouteInfo);
 
             var kmButton = $("<button class='plain_text_button " + (request.useMiles ? "gray" : "") + "'>");
             kmButton.text(translate.tr2("km_abbr"));
@@ -602,16 +649,39 @@ function routeLatLng(request, doQuery) {
             buttons.append('|');
             buttons.append(miButton);
 
-            routeInfo.append(buttons);
+            routeInfo.append(buttons);            
 
             if (request.hasElevation()) {
                 routeInfo.append(translate.createEleInfoString(path.ascend, path.descend, request.useMiles));
             }
+            
+            routeInfo.append($("<div style='clear:both'/>"));
             oneTab.append(routeInfo);
 
             if (path.instructions) {
                 var instructions = require('./instructions.js');
                 oneTab.append(instructions.create(mapLayer, path, urlForHistory, request));
+            }
+
+            var detailObj = path.details;
+            if(detailObj && request.api_params.debug) {
+                // detailKey, would be for example average_speed
+                for (var detailKey in detailObj) {
+                    var pathDetailsArr = detailObj[detailKey];
+                    for (var i = 0; i < pathDetailsArr.length; i++) {
+                        var pathDetailObj = pathDetailsArr[i];
+                        var firstIndex = pathDetailObj[0];
+                        var value = pathDetailObj[2];
+                        var lngLat = path.points.coordinates[firstIndex];
+                        L.marker([lngLat[1], lngLat[0]], {
+                            icon: L.icon({
+                                iconUrl: './img/marker-small-blue.png',
+                                iconSize: [15, 15]
+                            }),
+                            draggable: true
+                        }).addTo(mapLayer.getRoutingLayer()).bindPopup(detailKey + ":" + value);
+                    }
+                }
             }
         }
         // already select best path

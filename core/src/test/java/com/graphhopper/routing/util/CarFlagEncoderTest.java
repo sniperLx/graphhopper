@@ -84,6 +84,13 @@ public class CarFlagEncoderTest {
         assertFalse(encoder.isFerry(encoder.acceptWay(way)));
 
         way.clearTags();
+        way.setTag("route", "ferry");
+        way.setTag("access", "no");
+        assertFalse(encoder.acceptWay(way) > 0);
+        way.setTag("vehicle", "yes");
+        assertTrue(encoder.acceptWay(way) > 0);
+
+        way.clearTags();
         way.setTag("access", "yes");
         way.setTag("motor_vehicle", "no");
         assertFalse(encoder.acceptWay(way) > 0);
@@ -198,7 +205,7 @@ public class CarFlagEncoderTest {
         assertEquals(60, encoder.getSpeed(way), 1e-1);
 
         way.setTag("vehicle", "destination");
-        long flags = encoder.handleWayTags(way, encoder.acceptWay(way),0);
+        long flags = encoder.handleWayTags(way, encoder.acceptWay(way), 0);
         assertEquals(5, encoder.getSpeed(flags), 1e-1);
     }
 
@@ -297,6 +304,27 @@ public class CarFlagEncoderTest {
         encoded = encoder.handleWayTags(way, allowed, 0);
         assertEquals(30, encoder.getSpeed(encoded), 1e-1);
 
+        way.clearTags();
+        way.setTag("highway", "secondary");
+        way.setTag("motorroad", "yes");
+        allowed = encoder.acceptWay(way);
+        encoded = encoder.handleWayTags(way, allowed, 0);
+        assertEquals(90, encoder.getSpeed(encoded), 1e-1);
+
+        way.clearTags();
+        way.setTag("highway", "motorway");
+        way.setTag("motorroad", "yes"); // this tag should be ignored
+        allowed = encoder.acceptWay(way);
+        encoded = encoder.handleWayTags(way, allowed, 0);
+        assertEquals(100, encoder.getSpeed(encoded), 1e-1);
+
+        way.clearTags();
+        way.setTag("highway", "motorway_link");
+        way.setTag("motorroad", "yes"); // this tag should be ignored
+        allowed = encoder.acceptWay(way);
+        encoded = encoder.handleWayTags(way, allowed, 0);
+        assertEquals(70, encoder.getSpeed(encoded), 1e-1);
+
         try {
             encoder.setSpeed(0, -1);
             assertTrue(false);
@@ -345,6 +373,14 @@ public class CarFlagEncoderTest {
         assertTrue(encoder.isForward(flags));
         assertFalse(encoder.isBackward(flags));
         assertTrue(encoder.isBool(flags, FlagEncoder.K_ROUNDABOUT));
+
+        way.clearTags();
+        way.setTag("highway", "motorway");
+        way.setTag("junction", "circular");
+        flags = encoder.handleWayTags(way, encoder.acceptBit, 0);
+        assertTrue(encoder.isForward(flags));
+        assertFalse(encoder.isBackward(flags));
+        assertTrue(encoder.isBool(flags, FlagEncoder.K_ROUNDABOUT));
     }
 
     @Test
@@ -386,7 +422,7 @@ public class CarFlagEncoderTest {
         // accept
         assertTrue(encoder.acceptWay(way) > 0);
         // calculate speed from estimated_distance and duration
-        assertEquals(61, encoder.getFerrySpeed(way, 20, 30, 40), 1e-1);
+        assertEquals(61, encoder.getFerrySpeed(way), 1e-1);
 
         //Test for very short and slow 0.5km/h still realisitic ferry
         way = new ReaderWay(1);
@@ -398,7 +434,7 @@ public class CarFlagEncoderTest {
         // accept
         assertTrue(encoder.acceptWay(way) > 0);
         // We can't store 0.5km/h, but we expect the lowest possible speed (5km/h)
-        assertEquals(2.5, encoder.getFerrySpeed(way, 20, 30, 40), 1e-1);
+        assertEquals(2.5, encoder.getFerrySpeed(way), 1e-1);
         assertEquals(5, encoder.getSpeed(encoder.setSpeed(0, 2.5)), 1e-1);
 
         //Test for an unrealisitic long duration
@@ -411,7 +447,7 @@ public class CarFlagEncoderTest {
         // accept
         assertTrue(encoder.acceptWay(way) > 0);
         // We have ignored the unrealisitc long duration and take the unknown speed
-        assertEquals(20, encoder.getFerrySpeed(way, 20, 30, 40), 1e-1);
+        assertEquals(5, encoder.getFerrySpeed(way), 1e-1);
     }
 
     @Test
@@ -574,6 +610,7 @@ public class CarFlagEncoderTest {
         assertTrue(em.getEncoder("bike").isBackward(edgeFlags));
         assertTrue(em.getEncoder("bike").isForward(edgeFlags));
     }
+
     @Test
     public void testApplyBadSurfaceSpeed() {
         ReaderWay way = new ReaderWay(1);

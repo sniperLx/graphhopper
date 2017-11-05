@@ -93,6 +93,12 @@ public class FootFlagEncoderTest {
 
         way.setTag("sidewalk", "none");
         assertFalse(footEncoder.acceptWay(way) > 0);
+
+        way.clearTags();
+        way.setTag("highway", "tertiary");
+        way.setTag("sidewalk", "left");
+        way.setTag("access", "private");
+        assertFalse(footEncoder.acceptWay(way) > 0);
         way.clearTags();
 
         way.setTag("highway", "pedestrian");
@@ -193,6 +199,25 @@ public class FootFlagEncoderTest {
         way.setTag("railway", "tram");
         flags = footEncoder.handleWayTags(way, footEncoder.acceptWay(way), 0);
         assertEquals(0, flags);
+    }
+
+    @Test
+    public void testPier() {
+        ReaderWay way = new ReaderWay(1);
+        way.setTag("man_made", "pier");
+        long flags = footEncoder.handleWayTags(way, footEncoder.acceptWay(way), 0);
+        assertNotEquals(0, flags);
+    }
+
+    @Test
+    public void testFerrySpeed() {
+        ReaderWay way = new ReaderWay(1);
+        way.setTag("route", "ferry");
+        // a bit longer than an hour
+        way.setTag("duration:seconds", "4000");
+        long flags = footEncoder.handleWayTags(way, footEncoder.acceptWay(way), 0);
+        assertTrue(footEncoder.getSpeed(flags) > footEncoder.getMaxSpeed());
+        assertEquals(20, footEncoder.getSpeed(flags), .1);
     }
 
     @Test
@@ -338,6 +363,15 @@ public class FootFlagEncoderTest {
     public void handleWayTagsRoundabout() {
         ReaderWay way = new ReaderWay(1);
         way.setTag("junction", "roundabout");
+        way.setTag("highway", "tertiary");
+        long flags = footEncoder.handleWayTags(way, footEncoder.acceptWay(way), 0);
+        assertTrue(footEncoder.isBool(flags, FlagEncoder.K_ROUNDABOUT));
+    }
+
+    @Test
+    public void handleWayTagsCircularJunction() {
+        ReaderWay way = new ReaderWay(1);
+        way.setTag("junction", "circular");
         way.setTag("highway", "tertiary");
         long flags = footEncoder.handleWayTags(way, footEncoder.acceptWay(way), 0);
         assertTrue(footEncoder.isBool(flags, FlagEncoder.K_ROUNDABOUT));
